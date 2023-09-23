@@ -27,6 +27,7 @@ class LiveActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //private val panorama = true;
     //private val audioEnabled = true;
 
+    //UI Components to assign to later
     private var mTvLiveStatus: TextView? = null
     private var mCapturePlayerView: InstaCapturePlayerView? = null
     private var mBtnLive: ToggleButton? = null
@@ -53,7 +54,7 @@ class LiveActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
             val list = InstaCameraManager.getInstance()
                 .getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_LIVE)
-        if (!list.isEmpty()) {
+        if (list.isNotEmpty()) {
             mCurrentResolution = list[0]
             InstaCameraManager.getInstance().setPreviewStatusChangedListener(this)
 
@@ -123,6 +124,7 @@ class LiveActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             .setStabType(InstaStabType.STAB_TYPE_AUTO)
             .setStabEnabled(true)
             .setLive(true)
+            .setGestureEnabled(false) //added
             .setResolutionParams(
                 mCurrentResolution!!.width,
                 mCurrentResolution!!.height,
