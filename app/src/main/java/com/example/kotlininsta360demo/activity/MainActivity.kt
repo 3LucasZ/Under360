@@ -9,6 +9,17 @@ import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
 import com.arashivision.sdkmedia.InstaMediaSDK
 import com.example.kotlininsta360demo.R
+import io.ktor.application.call
+import io.ktor.features.ContentNegotiation
+import io.ktor.routing.routing
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.application.install
+import io.ktor.gson.gson
+import io.ktor.response.respond
+import io.ktor.routing.get
+import org.w3c.dom.Text
+import kotlin.system.measureTimeMillis
 
 
 class MainActivity : BaseObserveCameraActivity() {
@@ -42,15 +53,26 @@ class MainActivity : BaseObserveCameraActivity() {
                         sleep(1000)
                         runOnUiThread {
                             // update TextView here!
-                            findViewById<Button>(R.id.tv_cam_status).text = "Connected:"+InstaCameraManager.getInstance().cameraConnectedType+", Battery:"+InstaCameraManager.getInstance().cameraCurrentBatteryLevel+", Charging: "+InstaCameraManager.getInstance().isCameraCharging
+                            findViewById<TextView>(R.id.tv_cam_status).text =
+                                "T:"+System.currentTimeMillis() +", Connected:"+InstaCameraManager.getInstance().cameraConnectedType+ ", Battery:"+InstaCameraManager.getInstance().cameraCurrentBatteryLevel+", Charging:"+InstaCameraManager.getInstance().isCameraCharging
                         }
                     }
                 } catch (e: InterruptedException) {
                 }
             }
         }
-
         thread.start()
+
+        embeddedServer(Netty, 8080) {
+            install(ContentNegotiation) {
+                gson {}
+            }
+            routing {
+                get("/") {
+                    call.respond(mapOf("message" to "Hello world"))
+                }
+            }
+        }.start(wait = false)
     }
 }
 

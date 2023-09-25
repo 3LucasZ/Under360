@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.kotlininsta360demo"
-        minSdk 24
+        minSdk 26
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -40,6 +40,7 @@ android {
         kotlinCompilerExtensionVersion '1.3.2'
     }
     packagingOptions {
+        exclude 'META-INF/*'
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
@@ -70,4 +71,9 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+
+    implementation "io.ktor:ktor:1.6.4"
+    implementation "io.ktor:ktor-server-netty:1.6.4"
+    implementation "io.ktor:ktor-server-jetty:1.6.4"
+    implementation "io.ktor:ktor-gson:1.6.4"
 }
