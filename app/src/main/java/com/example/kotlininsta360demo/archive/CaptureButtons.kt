@@ -1,4 +1,4 @@
-package com.example.kotlininsta360demo
+package com.example.kotlininsta360demo.archive
 
 import androidx.compose.runtime.Composable
 import com.arashivision.sdkcamera.camera.InstaCameraManager
@@ -21,3 +21,25 @@ fun StopNormalRecordButton() {
         InstaCameraManager.getInstance().stopNormalRecord()
     })
 }
+
+//@Composable
+//fun MainScreen(msg: String) {
+//    val log = remember { mutableStateOf(msgToLog(msg)) }
+//    Column {
+//        UsbConnectButton()
+//        WifiConnectButton()
+//        DisconnectButton()
+//        CheckConnectButton(log = log)
+//
+//        StartNormalCaptureButton()
+//        StartNormalRecordButton()
+//        StopNormalRecordButton()
+//
+//        PrepareLiveButton()
+//        StartLiveButton(log = log)
+//        StopLiveButton()
+//        GetLiveSupportedResolutionButton(log = log)
+//
+//        Logger(log = log)
+//    }
+//}

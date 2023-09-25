@@ -1,4 +1,4 @@
-package com.example.kotlininsta360demo
+package com.example.kotlininsta360demo.archive
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState

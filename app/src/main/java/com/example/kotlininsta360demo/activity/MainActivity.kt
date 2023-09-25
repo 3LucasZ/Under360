@@ -10,16 +10,14 @@ import com.arashivision.sdkcamera.camera.InstaCameraManager
 import com.arashivision.sdkmedia.InstaMediaSDK
 import com.example.kotlininsta360demo.R
 import io.ktor.application.call
-import io.ktor.features.ContentNegotiation
-import io.ktor.routing.routing
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
 import io.ktor.application.install
+import io.ktor.features.ContentNegotiation
 import io.ktor.gson.gson
 import io.ktor.response.respond
 import io.ktor.routing.get
-import org.w3c.dom.Text
-import kotlin.system.measureTimeMillis
+import io.ktor.routing.routing
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 
 
 class MainActivity : BaseObserveCameraActivity() {
@@ -69,31 +67,9 @@ class MainActivity : BaseObserveCameraActivity() {
             }
             routing {
                 get("/") {
-                    call.respond(mapOf("message" to "Hello world"))
+                    call.respond(mapOf("message" to "Welcome to Insta360!"))
                 }
             }
         }.start(wait = false)
     }
 }
-
-//@Composable
-//fun MainScreen(msg: String) {
-//    val log = remember { mutableStateOf(msgToLog(msg)) }
-//    Column {
-//        UsbConnectButton()
-//        WifiConnectButton()
-//        DisconnectButton()
-//        CheckConnectButton(log = log)
-//
-//        StartNormalCaptureButton()
-//        StartNormalRecordButton()
-//        StopNormalRecordButton()
-//
-//        PrepareLiveButton()
-//        StartLiveButton(log = log)
-//        StopLiveButton()
-//        GetLiveSupportedResolutionButton(log = log)
-//
-//        Logger(log = log)
-//    }
-//}

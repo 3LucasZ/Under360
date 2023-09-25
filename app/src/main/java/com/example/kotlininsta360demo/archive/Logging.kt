@@ -1,4 +1,4 @@
-package com.example.kotlininsta360demo
+package com.example.kotlininsta360demo.archive
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
