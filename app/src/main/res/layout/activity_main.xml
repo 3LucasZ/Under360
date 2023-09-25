@@ -7,51 +7,55 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     tools:context=".activity.MainActivity">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center">
 
-        <TextView
-            android:id="@+id/tv_cam_status"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginStart="16dp"
-            android:autoSizeTextType="uniform"
-            android:maxLines="1"/>
-    </LinearLayout>
-    <LinearLayout
+    <TextView
+        android:id="@+id/tv_cam_status"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center">
+        android:layout_height="100dp"
+        android:layout_marginStart="16dp"
+        android:autoSizeTextType="uniform"
+        android:maxLines="1"/>
 
         <Button
             android:id="@+id/btn_connect"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
-            android:text="@string/connect"
-            android:textSize="50sp"
-             />
+            android:layout_height="wrap_content"
+            android:text="@string/connect" />
         <Button
             android:id="@+id/btn_disconnect"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
+            android:layout_height="wrap_content"
             android:text="@string/disconnect"
-            android:textSize="50sp"
-             />
+           />
         <Button
             android:id="@+id/btn_capture"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
+            android:layout_height="wrap_content"
             android:text="@string/capture"
-            android:textSize="50sp"
              />
-        <Button
-            android:id="@+id/btn_live_activity"
+
+        <ToggleButton
+            android:id="@+id/btn_preview"
             android:layout_width="wrap_content"
-            android:layout_height="100dp"
-            android:text="@string/live_activity"
-            android:textSize="50sp"
-             />
-    </LinearLayout>
+            android:layout_height="wrap_content"
+            android:textAllCaps="false"
+            android:textOff="@string/start_preview"
+            android:textOn="@string/stop_preview" />
+        <ToggleButton
+            android:id="@+id/btn_live"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAllCaps="false"
+            android:textOff="@string/start_live"
+            android:textOn="@string/stop_live" />
+        <com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
+            android:id="@+id/player_capture"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/darker_gray" />
+        <TextView
+            android:id="@+id/tv_live_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp" />
 </LinearLayout>

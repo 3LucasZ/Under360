@@ -4,4 +4,8 @@
     <string name="disconnect">Disconnect</string>
     <string name="capture">Capture</string>
     <string name="live_activity">Live Activity</string>
+    <string name="start_preview">Start Preview</string>
+    <string name="stop_preview">Stop Preview</string>
+    <string name="start_live">Start Live</string>
+    <string name="stop_live">Stop Live</string>
 </resources>
