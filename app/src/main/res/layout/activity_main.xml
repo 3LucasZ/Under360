@@ -7,47 +7,78 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     tools:context=".activity.MainActivity">
-
-    <TextView
-        android:id="@+id/tv_cam_status"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:layout_marginStart="16dp"
-        android:autoSizeTextType="uniform"
-        android:maxLines="1"/>
+        android:layout_height="wrap_content"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/tv_cam_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:autoSizeTextType="uniform"
+            android:maxLines="1"/>
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
 
         <Button
             android:id="@+id/btn_connect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/connect" />
+            android:text="Connect"
+            android:textSize="25sp"
+             />
         <Button
             android:id="@+id/btn_disconnect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/disconnect"
-           />
+            android:text="Disconnect"
+            android:textSize="25sp"
+             />
         <Button
             android:id="@+id/btn_capture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/capture"
+            android:text="Capture"
+            android:textSize="25sp"
              />
 
-        <ToggleButton
-            android:id="@+id/btn_preview"
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center">
+        <Button
+            android:id="@+id/btn_start_preview"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAllCaps="false"
-            android:textOff="@string/start_preview"
-            android:textOn="@string/stop_preview" />
-        <ToggleButton
-            android:id="@+id/btn_live"
+            android:text="Start Preview"
+            android:textSize="25sp"
+            />
+        <Button
+            android:id="@+id/btn_stop_preview"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAllCaps="false"
-            android:textOff="@string/start_live"
-            android:textOn="@string/stop_live" />
+            android:text="Stop Preview"
+            android:textSize="25sp"
+            />
+        <Button
+            android:id="@+id/btn_start_livestream"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start Livestream"
+            android:textSize="25sp"
+            />
+        <Button
+            android:id="@+id/btn_stop_livestream"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop Livestream"
+            android:textSize="25sp"
+            />
         <com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
             android:id="@+id/player_capture"
             android:layout_width="wrap_content"
@@ -57,5 +88,7 @@
             android:id="@+id/tv_live_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp" />
+            android:text="No live status received"
+            android:textSize="25sp"/>
+    </LinearLayout>
 </LinearLayout>
