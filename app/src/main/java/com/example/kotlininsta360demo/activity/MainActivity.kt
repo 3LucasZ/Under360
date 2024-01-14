@@ -173,8 +173,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(mapOf("msg" to "ok"))
                 }
                 }
-                get("/status/fps") {
-                    call.respond(mapOf("fps" to fps))
                 get("/status") {
                     val request = call.request.queryParameters;
                     Log.w("request",request.toString());
