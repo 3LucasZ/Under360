@@ -2,6 +2,7 @@ package com.example.kotlininsta360demo.activity
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import com.arashivision.sdkcamera.InstaCameraSDK
@@ -171,22 +172,30 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     stopLivestream();
                     call.respond(mapOf("msg" to "ok"))
                 }
-                get("/status/time") {
-                    call.respond(mapOf("time" to System.currentTimeMillis()))
-                }
-                get("/status/connectedType") {
-                    call.respond(mapOf("connectedType" to InstaCameraManager.getInstance().cameraConnectedType))
-                }
-                get("/status/batteryLevel") {
-                    call.respond(mapOf("batteryLevel" to InstaCameraManager.getInstance().cameraCurrentBatteryLevel))
                 }
                 get("/status/fps") {
                     call.respond(mapOf("fps" to fps))
+                get("/status") {
+                    val request = call.request.queryParameters;
+                    Log.w("request",request.toString());
+                    val response =  HashMap<String,String>();
+                    //connection
+                    if (request.contains("connectedType")) response["connectedType"] = InstaCameraManager.getInstance().cameraConnectedType.toString();
+                    //battery
+                    if (request.contains("batteryLevel")) response["batteryLevel"] = InstaCameraManager.getInstance().cameraCurrentBatteryLevel.toString();
+                    if (request.contains("isCharging")) response["isCharging"] = InstaCameraManager.getInstance().isCameraCharging.toString();
+                    //mem
+                    if (request.contains("isSdEnabled")) response["isSdEnabled"] = InstaCameraManager.getInstance().isSdCardEnabled.toString();
+                    if (request.contains("freeSpace")) response["freeSpace"] = InstaCameraManager.getInstance().cameraStorageFreeSpace.toString();
+                    if (request.contains("totalSpace")) response["totalSpace"] = InstaCameraManager.getInstance().cameraStorageTotalSpace.toString();
+                    if (request.contains("urlList")) response["urlList"] = InstaCameraManager.getInstance().allUrlList.toString();
+                    //livestream
+                    if (request.contains("livestreamFPS")) response["livestreamFPS"] = livestreamFPS.toString();
+                    call.respond(response);
                 }
             }
         }.start(wait = false)
     }
-
 
 
     //---API FUNCTIONS---
@@ -233,7 +242,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
 
 
-
     //---HELPERS---
     private fun createParams(): CaptureParamsBuilder? {
         return CaptureParamsBuilder()
@@ -264,8 +272,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             stopPreview()
         }
     }
+
     //Preview steam started and playable callback
     override fun onOpened() {
+
         InstaCameraManager.getInstance().setStreamEncode()
         previewView!!.setPlayerViewListener(object : PlayerViewListener {
             override fun onLoadingFinish() {
@@ -297,6 +307,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
     @SuppressLint("SetTextI18n")
     override fun onLiveFpsUpdate(fps: Int) {
+        livestreamFPS = fps;
         livestreamStatusText?.text = "FPS: $fps";
     }
 
