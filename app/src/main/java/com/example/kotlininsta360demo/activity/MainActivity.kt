@@ -61,7 +61,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private val width = 1920
     private val height = 1080
     private val fps = 30
-    private val bitRate = 8 * 1024 * 1024
+    private val bitRate = 18 * 1024 * 1024
     private val panorama = true
     private val audioEnabled = true
     private val livestreamSettings = LiveParamsBuilder()
