@@ -206,7 +206,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["isPanoramaFile"] = workWrapper.isPanoramaFile.toString()
                     call.respond(response)
                 }
-                get("/export/image"){
+                get("/export/image") {
                     val request = call.request.queryParameters
                     val url = request["url"]
                     exportWorkWrapper = WorkWrapper(url)
@@ -214,7 +214,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         call.respond(mapOf("err" to "url is not an image"))
                     } else {
                         val exportImageSettings = ExportImageParamsBuilder()
-                            .setExportMode(ExportUtils.ExportMode.PANORAMA).setImageFusion(exportWorkWrapper.isPanoramaFile)
+                            .setExportMode(ExportUtils.ExportMode.PANORAMA)
+                            .setImageFusion(exportWorkWrapper.isPanoramaFile)
                             .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
                         exportId = ExportUtils.exportImage(
                             exportWorkWrapper,
@@ -227,7 +228,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val request = call.request.queryParameters
                     val url = request["url"]
                     Log.w("url", url.toString())
-
                     val workWrapper = WorkWrapper(url)
                     if (!workWrapper.isVideo) {
                         call.respond(mapOf("err" to "url is not a video"))
@@ -238,14 +238,14 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 //                                .setHeight(16).setBitrate(1 * 1024 * 1024).setFps(1)
 //                                .setDynamicStitch(false);
                         val exportVideoSettings =
-                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + System.currentTimeMillis()).setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
+                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + System.currentTimeMillis() + ".mp4")
+                                .setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
                         exportId =
                             ExportUtils.exportVideo(
                                 workWrapper,
                                 exportVideoSettings,
                                 this@MainActivity
                             )
-
                     }
                 }
                 get("/status/camera") {
@@ -443,7 +443,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
     //Export callbacks
     override fun onSuccess() {
-        Log.w("EXPORT CALLBACK","ON SUCCESS")
+        Log.w("EXPORT CALLBACK", "ON SUCCESS")
     }
 
     override fun onFail(p0: Int, p1: String?) {
