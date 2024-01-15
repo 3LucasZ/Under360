@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.StatFs
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import com.arashivision.sdkcamera.InstaCameraSDK
@@ -23,6 +24,7 @@ import com.arashivision.sdkmedia.export.IExportCallback
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
+import com.arashivision.sdkmedia.player.image.ImageParamsBuilder
 import com.arashivision.sdkmedia.player.image.InstaImagePlayerView
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 import com.arashivision.sdkmedia.work.WorkUtils
@@ -41,15 +43,13 @@ import io.ktor.server.jetty.Jetty
 
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
-    IExportCallback {
+    IExportCallback, PlayerViewListener {
     //UI components to assign to later
     private var connectBtn: Button? = null
     private var disconnectBtn: Button? = null
     private var captureBtn: Button? = null
     private var startPreviewBtn: Button? = null
     private var stopPreviewBtn: Button? = null
-    private var startLivestreamBtn: Button? = null
-    private var stopLivestreamBtn: Button? = null
     private var livestreamStatusText: TextView? = null
     private var previewView: InstaCapturePlayerView? = null
     private var imagePlayerView: InstaImagePlayerView? = null
@@ -75,8 +75,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         .setPanorama(panorama)
 
     //export state
-    private var exportId = -1;
-    private var exportProgress = 0.0;
+    private var exportId = -1
+    private var exportProgress = 0.0
+    private var exportWorkWrapper = WorkWrapper("");
 
     //export configuration
     private val workUrls = "CAMERA_FILE_PATH"
@@ -117,6 +118,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
         imagePlayerView = findViewById(R.id.player_image)
+        imagePlayerView!!.setLifecycle(lifecycle)
         livestreamStatusText = findViewById(R.id.tv_live_status)
 
 //        //Infinite loop to update top bar UI with latest information
@@ -197,37 +199,37 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     Log.w("url", url.toString())
                     val workWrapper = WorkWrapper(url)
                     val response = HashMap<String, String>()
-                    response["urlsRaw"] = workWrapper.getUrls(true).joinToString();
-                    response["urlsNotRaw"] = workWrapper.getUrls(false).joinToString();
-                    response["width"] = workWrapper.width.toString();
-                    response["height"] = workWrapper.height.toString();
-                    response["bitrate"] = workWrapper.bitrate.toString();
-                    response["fps"] = workWrapper.fps.toString();
-                    response["isPhoto"] = workWrapper.isPhoto.toString();
-                    response["isVideo"] = workWrapper.isVideo.toString();
-                    response["isCameraFile"] = workWrapper.isCameraFile.toString();
-                    response["isLocalFile"] = workWrapper.isLocalFile.toString();
-                    response["creationTime"] = workWrapper.creationTime.toString();
-                    response["isPanoramaFile"] = workWrapper.isPanoramaFile.toString();
+                    response["urlsRaw"] = workWrapper.getUrls(true).joinToString()
+                    response["urlsNotRaw"] = workWrapper.getUrls(false).joinToString()
+                    response["width"] = workWrapper.width.toString()
+                    response["height"] = workWrapper.height.toString()
+                    response["bitrate"] = workWrapper.bitrate.toString()
+                    response["fps"] = workWrapper.fps.toString()
+                    response["isPhoto"] = workWrapper.isPhoto.toString()
+                    response["isVideo"] = workWrapper.isVideo.toString()
+                    response["isCameraFile"] = workWrapper.isCameraFile.toString()
+                    response["isLocalFile"] = workWrapper.isLocalFile.toString()
+                    response["creationTime"] = workWrapper.creationTime.toString()
+                    response["isPanoramaFile"] = workWrapper.isPanoramaFile.toString()
                     call.respond(response)
                 }
                 get("/export/image"){
                     val request = call.request.queryParameters
                     val url = request["url"]
                     Log.w("***EXPORT IMAGE***", url.toString())
-                    val workWrapper = WorkWrapper(url)
-                    if (!workWrapper.isPhoto) {
+                    exportWorkWrapper = WorkWrapper(url)
+                    if (!exportWorkWrapper.isPhoto) {
                         call.respond(mapOf("err" to "url is not an image"))
                     } else {
-
-                        val exportImageSettings = ExportImageParamsBuilder()
-                            .setExportMode(ExportUtils.ExportMode.PANORAMA).setImageFusion(workWrapper.isPanoramaFile)
-                            .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
-                        exportId = ExportUtils.exportImage(
-                            workWrapper,
-                            exportImageSettings,
-                            this@MainActivity
-                        )
+                        Log.w("***EXPORT WORK WRAPPER***", exportWorkWrapper.toString())
+                        imagePlayerView!!.switchNormalMode()
+                        imagePlayerView!!.visibility = View.VISIBLE;
+                        imagePlayerView!!.setPlayerViewListener(this@MainActivity)
+                        val imageSettings = ImageParamsBuilder()
+                        imageSettings.isWithSwitchingAnimation = true
+                        imageSettings.isImageFusion = exportWorkWrapper.isPanoramaFile
+                        imagePlayerView!!.prepare(exportWorkWrapper, imageSettings)
+                        imagePlayerView!!.play()
                     }
                 }
                 get("/export/video") {
@@ -245,7 +247,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 //                                .setHeight(16).setBitrate(1 * 1024 * 1024).setFps(1)
 //                                .setDynamicStitch(false);
                         val exportVideoSettings =
-                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + System.currentTimeMillis()).setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512);
+                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + System.currentTimeMillis()).setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
                         exportId =
                             ExportUtils.exportVideo(
                                 workWrapper,
@@ -288,7 +290,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     //settings
                     if (request.contains("exportDirPath")) response["exportDirPath"] = exportDirPath
                     //export
-                    if (request.contains("exportId")) response["exportId"] = exportId.toString();
+                    if (request.contains("exportId")) response["exportId"] = exportId.toString()
                     if (request.contains("exportProgress")) response["exportProgress"] =
                         exportProgress.toString()
                     //ret
@@ -327,11 +329,11 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
 
     private fun startRecord() {
-        InstaCameraManager.getInstance().startNormalRecord();
+        InstaCameraManager.getInstance().startNormalRecord()
     }
 
     private fun stopRecord() {
-        InstaCameraManager.getInstance().stopNormalRecord();
+        InstaCameraManager.getInstance().stopNormalRecord()
     }
 
     private fun startPreview() {
@@ -449,19 +451,38 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
     //Export callbacks
     override fun onSuccess() {
-        TODO("Not yet implemented")
+        Log.w("EXPORT CALLBACK","ON SUCCESS")
     }
 
     override fun onFail(p0: Int, p1: String?) {
-        TODO("Not yet implemented")
+        Log.w("EXPORT CALLBACK", "ON FAIL: $p0 | $p1")
     }
 
     override fun onCancel() {
-        TODO("Not yet implemented")
+        Log.w("EXPORT CALLBACK", "ON CANCEL")
     }
 
     override fun onProgress(progress: Float) {
         exportProgress = progress.toDouble()
     }
 
+    //Image player callbacks
+    override fun onLoadingStatusChanged(isLoading: Boolean) {
+        Log.w("isLoading",isLoading.toString())
+        if (!isLoading) {
+            val exportImageSettings = ExportImageParamsBuilder()
+                .setExportMode(ExportUtils.ExportMode.PANORAMA).setImageFusion(exportWorkWrapper.isPanoramaFile)
+                .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
+            exportId = ExportUtils.exportImage(
+                exportWorkWrapper,
+                exportImageSettings,
+                this@MainActivity
+            )
+        }
+    }
+    override fun onLoadingFinish() {
+        Log.w("onLoadingFinish","ON LOADING IS FINISHED")
+    }
+
+//    override fun onFail(errorCode: Int, errorMsg: String?) {}
 }
