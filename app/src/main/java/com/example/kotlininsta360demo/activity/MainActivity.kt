@@ -23,6 +23,7 @@ import com.arashivision.sdkmedia.export.IExportCallback
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
+import com.arashivision.sdkmedia.player.image.InstaImagePlayerView
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 import com.arashivision.sdkmedia.work.WorkUtils
 import com.arashivision.sdkmedia.work.WorkWrapper
@@ -51,6 +52,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var stopLivestreamBtn: Button? = null
     private var livestreamStatusText: TextView? = null
     private var previewView: InstaCapturePlayerView? = null
+    private var imagePlayerView: InstaImagePlayerView? = null
 
     //streaming state
     private var previewResolution: PreviewStreamResolution? = null
@@ -77,9 +79,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var exportProgress = 0.0;
 
     //export configuration
+    private val workUrls = "CAMERA_FILE_PATH"
     private val exportDirPath =
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            .toString() + "/SDK_DEMO_EXPORT"
+            .toString() + "/SDK_DEMO_EXPORT/"
 
     //Initialize (run on app load)
     @SuppressLint("MissingInflatedId")
@@ -111,16 +114,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         stopPreviewBtn?.setOnClickListener {
             stopPreview()
         }
-        startLivestreamBtn = findViewById(R.id.btn_start_livestream)
-        startLivestreamBtn?.setOnClickListener {
-            startLivestream()
-        }
-        stopLivestreamBtn = findViewById(R.id.btn_stop_livestream)
-        stopLivestreamBtn?.setOnClickListener {
-            stopLivestream()
-        }
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
+        imagePlayerView = findViewById(R.id.player_image)
         livestreamStatusText = findViewById(R.id.tv_live_status)
 
 //        //Infinite loop to update top bar UI with latest information
@@ -188,27 +184,11 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
                 }
                 get("/command/startPreview") {
-                    if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
-                        startPreview()
-                        call.respond(mapOf("msg" to "ok"))
-                    } else {
-                        call.respond(mapOf("err" to "camera not connected"))
-                    }
-                }
-                get("/command/stopPreview") {
-                    if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
-                        stopPreview()
-                        call.respond(mapOf("msg" to "ok"))
-                    } else {
-                        call.respond(mapOf("err" to "camera not connected"))
-                    }
-                }
-                get("/command/startLivestream") {
-                    startLivestream()
+                    startPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
-                get("/command/stopLivestream") {
-                    stopLivestream()
+                get("/command/stopPreview") {
+                    stopPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/inspect") {
@@ -218,7 +198,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val workWrapper = WorkWrapper(url)
                     val response = HashMap<String, String>()
                     response["urlsRaw"] = workWrapper.getUrls(true).joinToString();
-                    response["urls"] = workWrapper.getUrls(false).joinToString();
+                    response["urlsNotRaw"] = workWrapper.getUrls(false).joinToString();
                     response["width"] = workWrapper.width.toString();
                     response["height"] = workWrapper.height.toString();
                     response["bitrate"] = workWrapper.bitrate.toString();
@@ -231,17 +211,18 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["isPanoramaFile"] = workWrapper.isPanoramaFile.toString();
                     call.respond(response)
                 }
-                get("/download/image"){
+                get("/export/image"){
                     val request = call.request.queryParameters
                     val url = request["url"]
-                    Log.w("url", url.toString())
+                    Log.w("***EXPORT IMAGE***", url.toString())
                     val workWrapper = WorkWrapper(url)
                     if (!workWrapper.isPhoto) {
                         call.respond(mapOf("err" to "url is not an image"))
                     } else {
+
                         val exportImageSettings = ExportImageParamsBuilder()
                             .setExportMode(ExportUtils.ExportMode.PANORAMA).setImageFusion(workWrapper.isPanoramaFile)
-                            .setTargetPath(exportDirPath + "/" + System.currentTimeMillis() + ".jpg")
+                            .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
                         exportId = ExportUtils.exportImage(
                             workWrapper,
                             exportImageSettings,
@@ -249,7 +230,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         )
                     }
                 }
-                get("/download/video") {
+                get("/export/video") {
                     val request = call.request.queryParameters
                     val url = request["url"]
                     Log.w("url", url.toString())
@@ -264,7 +245,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 //                                .setHeight(16).setBitrate(1 * 1024 * 1024).setFps(1)
 //                                .setDynamicStitch(false);
                         val exportVideoSettings =
-                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + "/" + System.currentTimeMillis()).setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512);
+                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + System.currentTimeMillis()).setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512);
                         exportId =
                             ExportUtils.exportVideo(
                                 workWrapper,
@@ -359,30 +340,26 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         if (list.isNotEmpty()) {
             InstaCameraManager.getInstance().setPreviewStatusChangedListener(this)
             previewResolution = list[0]
+            val previewSettings = PreviewParamsBuilder()
+                .setStreamResolution(previewResolution)
+                .setPreviewType(InstaCameraManager.PREVIEW_TYPE_LIVE)
+                .setAudioEnabled(audioEnabled)
+            InstaCameraManager.getInstance().startPreviewStream(previewSettings)
         }
-        val previewSettings = PreviewParamsBuilder()
-            .setStreamResolution(previewResolution)
-            .setPreviewType(InstaCameraManager.PREVIEW_TYPE_LIVE)
-            .setAudioEnabled(audioEnabled)
-        InstaCameraManager.getInstance().startPreviewStream(previewSettings)
     }
 
     private fun stopPreview() {
-        stopLivestream()
+        //stop live
+        InstaCameraManager.getInstance().stopLive()
+        //stop preview
         InstaCameraManager.getInstance().closePreviewStream()
         InstaCameraManager.getInstance().setPreviewStatusChangedListener(null)
         previewView!!.destroy()
     }
 
     private fun startLivestream() {
-        previewView?.setLiveType(InstaCapturePlayerView.LIVE_TYPE_PANORAMA)
         InstaCameraManager.getInstance().startLive(livestreamSettings, this)
     }
-
-    private fun stopLivestream() {
-        InstaCameraManager.getInstance().stopLive()
-    }
-
 
     //---HELPERS---
     private fun createParams(): CaptureParamsBuilder? {
@@ -421,13 +398,14 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         }
     }
 
-    //Preview steam started and playable callback
+    //Preview callbacks
+    //Steam started and playable
     override fun onOpened() {
-
         InstaCameraManager.getInstance().setStreamEncode()
         previewView!!.setPlayerViewListener(object : PlayerViewListener {
             override fun onLoadingFinish() {
                 InstaCameraManager.getInstance().setPipeline(previewView!!.pipeline)
+                startLivestream()
             }
 
             override fun onReleaseCameraPipeline() {
@@ -443,7 +421,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     override fun onCameraStatusChanged(enabled: Boolean) {
         super.onCameraStatusChanged(enabled)
         if (!enabled) {
-            stopLivestream()
+            stopPreview()
         }
     }
 
