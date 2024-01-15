@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.StatFs
 import android.util.Log
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import com.arashivision.sdkcamera.InstaCameraSDK
@@ -24,8 +23,6 @@ import com.arashivision.sdkmedia.export.IExportCallback
 import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
-import com.arashivision.sdkmedia.player.image.ImageParamsBuilder
-import com.arashivision.sdkmedia.player.image.InstaImagePlayerView
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 import com.arashivision.sdkmedia.work.WorkUtils
 import com.arashivision.sdkmedia.work.WorkWrapper
@@ -52,7 +49,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var stopPreviewBtn: Button? = null
     private var livestreamStatusText: TextView? = null
     private var previewView: InstaCapturePlayerView? = null
-    private var imagePlayerView: InstaImagePlayerView? = null
 
     //streaming state
     private var previewResolution: PreviewStreamResolution? = null
@@ -77,10 +73,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //export state
     private var exportId = -1
     private var exportProgress = 0.0
-    private var exportWorkWrapper = WorkWrapper("");
+    private var exportWorkWrapper = WorkWrapper("")
 
     //export configuration
-    private val workUrls = "CAMERA_FILE_PATH"
     private val exportDirPath =
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             .toString() + "/SDK_DEMO_EXPORT/"
@@ -117,8 +112,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         }
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
-        imagePlayerView = findViewById(R.id.player_image)
-        imagePlayerView!!.setLifecycle(lifecycle)
         livestreamStatusText = findViewById(R.id.tv_live_status)
 
 //        //Infinite loop to update top bar UI with latest information
@@ -216,20 +209,18 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 get("/export/image"){
                     val request = call.request.queryParameters
                     val url = request["url"]
-                    Log.w("***EXPORT IMAGE***", url.toString())
                     exportWorkWrapper = WorkWrapper(url)
                     if (!exportWorkWrapper.isPhoto) {
                         call.respond(mapOf("err" to "url is not an image"))
                     } else {
-                        Log.w("***EXPORT WORK WRAPPER***", exportWorkWrapper.toString())
-                        imagePlayerView!!.switchNormalMode()
-                        imagePlayerView!!.visibility = View.VISIBLE;
-                        imagePlayerView!!.setPlayerViewListener(this@MainActivity)
-                        val imageSettings = ImageParamsBuilder()
-                        imageSettings.isWithSwitchingAnimation = true
-                        imageSettings.isImageFusion = exportWorkWrapper.isPanoramaFile
-                        imagePlayerView!!.prepare(exportWorkWrapper, imageSettings)
-                        imagePlayerView!!.play()
+                        val exportImageSettings = ExportImageParamsBuilder()
+                            .setExportMode(ExportUtils.ExportMode.PANORAMA).setImageFusion(exportWorkWrapper.isPanoramaFile)
+                            .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
+                        exportId = ExportUtils.exportImage(
+                            exportWorkWrapper,
+                            exportImageSettings,
+                            this@MainActivity
+                        )
                     }
                 }
                 get("/export/video") {
@@ -254,6 +245,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                                 exportVideoSettings,
                                 this@MainActivity
                             )
+
                     }
                 }
                 get("/status/camera") {
@@ -463,26 +455,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
 
     override fun onProgress(progress: Float) {
+        Log.w("EXPORT CALLBACK", "ON PROGRESS: $progress")
         exportProgress = progress.toDouble()
     }
-
-    //Image player callbacks
-    override fun onLoadingStatusChanged(isLoading: Boolean) {
-        Log.w("isLoading",isLoading.toString())
-        if (!isLoading) {
-            val exportImageSettings = ExportImageParamsBuilder()
-                .setExportMode(ExportUtils.ExportMode.PANORAMA).setImageFusion(exportWorkWrapper.isPanoramaFile)
-                .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
-            exportId = ExportUtils.exportImage(
-                exportWorkWrapper,
-                exportImageSettings,
-                this@MainActivity
-            )
-        }
-    }
-    override fun onLoadingFinish() {
-        Log.w("onLoadingFinish","ON LOADING IS FINISHED")
-    }
-
-//    override fun onFail(errorCode: Int, errorMsg: String?) {}
 }
