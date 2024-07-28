@@ -143,6 +143,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 get("/") {
                     call.respond(mapOf("msg" to "Welcome to Underwater API!"))
                 }
+                //---CONNECT--
                 get("/command/connect") {
                     connectCamera()
                     call.respond(mapOf("msg" to "ok"))
@@ -151,6 +152,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     disconnectCamera()
                     call.respond(mapOf("msg" to "ok"))
                 }
+                //--CAPTURE--
                 get("/command/capture") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
                         captureImage()
@@ -158,7 +160,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     } else {
                         call.respond(mapOf("err" to "camera not connected"))
                     }
-
                 }
                 get("/command/startRecord") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
@@ -167,7 +168,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     } else {
                         call.respond(mapOf("err" to "camera not connected"))
                     }
-
                 }
                 get("/command/stopRecord") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
@@ -176,16 +176,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     } else {
                         call.respond(mapOf("err" to "camera not connected"))
                     }
-
                 }
-                get("/command/startPreview") {
+                get("/command/startLive") {
                     startPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
-                get("/command/stopPreview") {
+                get("/command/stopLive") {
                     stopPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
+                //--EXPORT--
                 get("/ls"){
                     val response = HashMap<String, Any>()
                     response["rawUrlList"] = InstaCameraManager.getInstance().rawUrlList;
@@ -262,6 +262,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             )
                     }
                 }
+                //--STATUS--
                 get("/status/camera") {
                     val request = call.request.queryParameters
                     Log.w("request", request.toString())
@@ -397,16 +398,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
 
     //---CALLBACKS---
-    //Activity is no longer the one being viewed callback
+    //Main activity is no longer being viewed callback
     override fun onStop() {
         super.onStop()
         if (isFinishing) {
-            // Auto close preview after page loses focus
+            // Auto close preview since page loses focus
             stopPreview()
         }
     }
 
-    //Preview callbacks
+    //Preview callback
     //Steam started and playable
     override fun onOpened() {
         InstaCameraManager.getInstance().setStreamEncode()
