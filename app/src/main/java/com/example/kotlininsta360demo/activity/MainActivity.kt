@@ -186,43 +186,57 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     stopPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
+                get("/ls"){
+                    val response = HashMap<String, Any>()
+                    response["rawUrlList"] = InstaCameraManager.getInstance().rawUrlList;
+                    response["allUrlList"] = InstaCameraManager.getInstance().allUrlList;
+                    response["allUrlListIncludeRecording"] = InstaCameraManager.getInstance().allUrlListIncludeRecording;
+                    response["cameraHttpPrefix"] = InstaCameraManager.getInstance().cameraHttpPrefix;
+                    call.respond(response)
+                }
                 get("/inspect") {
                     val request = call.request.queryParameters
                     val url = request["url"]
                     Log.w("url", url.toString())
                     val workWrapper = WorkWrapper(url)
-                    val response = HashMap<String, String>()
-                    response["urlsRaw"] = workWrapper.getUrls(true).joinToString()
-                    response["urlsNotRaw"] = workWrapper.getUrls(false).joinToString()
-                    response["width"] = workWrapper.width.toString()
-                    response["height"] = workWrapper.height.toString()
-                    response["bitrate"] = workWrapper.bitrate.toString()
-                    response["fps"] = workWrapper.fps.toString()
-                    response["isPhoto"] = workWrapper.isPhoto.toString()
-                    response["isVideo"] = workWrapper.isVideo.toString()
-                    response["isCameraFile"] = workWrapper.isCameraFile.toString()
-                    response["isLocalFile"] = workWrapper.isLocalFile.toString()
-                    response["creationTime"] = workWrapper.creationTime.toString()
-                    response["isPanoramaFile"] = workWrapper.isPanoramaFile.toString()
+                    val response = HashMap<String, Any>()
+                    response["urlsRaw"] = workWrapper.getUrls(true)
+                    response["urlsNotRaw"] = workWrapper.getUrls(false)
+                    response["width"] = workWrapper.width
+                    response["height"] = workWrapper.height
+                    response["durationInMs"] = workWrapper.durationInMs
+                    response["bitrate"] = workWrapper.bitrate
+                    response["fps"] = workWrapper.fps
+                    response["isPhoto"] = workWrapper.isPhoto
+                    response["isVideo"] = workWrapper.isVideo
+                    response["isCameraFile"] = workWrapper.isCameraFile
+                    response["isLocalFile"] = workWrapper.isLocalFile
+                    response["creationTime"] = workWrapper.creationTime
+                    response["isPanoramaFile"] = workWrapper.isPanoramaFile
                     call.respond(response)
                 }
                 get("/export/image") {
                     val request = call.request.queryParameters
+                    val response = HashMap<String, Any>()
                     val url = request["url"]
                     exportWorkWrapper = WorkWrapper(url)
+
                     if (!exportWorkWrapper.isPhoto) {
-                        call.respond(mapOf("err" to "url is not an image"))
+                        response["msg"] = "requested url is not a photo"
                     } else {
+                        val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".jpg"
                         val exportImageSettings = ExportImageParamsBuilder()
                             .setExportMode(ExportUtils.ExportMode.PANORAMA)
                             .setImageFusion(exportWorkWrapper.isPanoramaFile)
-                            .setTargetPath(exportDirPath + System.currentTimeMillis() + ".jpg")
+                            .setTargetPath(exportDirPath + exportFileName)
                         exportId = ExportUtils.exportImage(
                             exportWorkWrapper,
                             exportImageSettings,
                             this@MainActivity
                         )
+                        response["msg"] = "ok"
                     }
+                    call.respond(response)
                 }
                 get("/export/video") {
                     val request = call.request.queryParameters
