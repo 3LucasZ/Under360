@@ -264,54 +264,40 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 //--STATUS--
                 get("/status/camera") {
-                    val request = call.request.queryParameters
-                    Log.w("request", request.toString())
-                    val response = HashMap<String, String>()
+                    val response = HashMap<String, Any>()
                     //connection
-                    if (request.contains("connectedType")) response["connectedType"] =
-                        InstaCameraManager.getInstance().cameraConnectedType.toString()
+                    InstaCameraManager.getInstance().cameraConnectedType
                     //battery
-                    if (request.contains("batteryLevel")) response["batteryLevel"] =
-                        InstaCameraManager.getInstance().cameraCurrentBatteryLevel.toString()
-                    if (request.contains("isCharging")) response["isCharging"] =
-                        InstaCameraManager.getInstance().isCameraCharging.toString()
+                    InstaCameraManager.getInstance().cameraCurrentBatteryLevel
+                    InstaCameraManager.getInstance().isCameraCharging
                     //mem
-                    if (request.contains("isSdEnabled")) response["isSdEnabled"] =
-                        InstaCameraManager.getInstance().isSdCardEnabled.toString()
-                    if (request.contains("freeSpace")) response["freeSpace"] =
-                        formatSize(InstaCameraManager.getInstance().cameraStorageFreeSpace)
-                    if (request.contains("totalSpace")) response["totalSpace"] =
-                        formatSize(InstaCameraManager.getInstance().cameraStorageTotalSpace)
-                    if (request.contains("urlList")) response["urlList"] =
-                        InstaCameraManager.getInstance().allUrlList.toString()
-                    if (request.contains("workWrapperList")) response["workWrapperList"] =
-                        WorkUtils.getAllCameraWorks(
-                            InstaCameraManager.getInstance().cameraHttpPrefix,
-                            InstaCameraManager.getInstance().cameraInfoMap,
-                            InstaCameraManager.getInstance().allUrlList,
-                            InstaCameraManager.getInstance().rawUrlList
-                        ).toString()
+                    InstaCameraManager.getInstance().isSdCardEnabled
+                    formatSize(InstaCameraManager.getInstance().cameraStorageFreeSpace)
+                    formatSize(InstaCameraManager.getInstance().cameraStorageTotalSpace)
+//                    InstaCameraManager.getInstance().allUrlList
+//                    WorkUtils.getAllCameraWorks(
+//                        InstaCameraManager.getInstance().cameraHttpPrefix,
+//                        InstaCameraManager.getInstance().cameraInfoMap,
+//                        InstaCameraManager.getInstance().allUrlList,
+//                        InstaCameraManager.getInstance().rawUrlList
+//                    ).toString()
                     //livestream
-                    if (request.contains("livestreamFPS")) response["livestreamFPS"] =
-                        livestreamFPS.toString()
+                    livestreamFPS.toString()
                     //settings
-                    if (request.contains("exportDirPath")) response["exportDirPath"] = exportDirPath
+                    response["exportDirPath"] = exportDirPath
                     //export
-                    if (request.contains("exportId")) response["exportId"] = exportId.toString()
-                    if (request.contains("exportProgress")) response["exportProgress"] =
-                        exportProgress.toString()
+                    response["exportId"] = exportId.toString()
+                    response["exportProgress"] = exportProgress.toString()
                     //ret
                     call.respond(response)
                 }
                 get("/status/khadas") {
                     val request = call.request.queryParameters
                     Log.w("request", request.toString())
-                    val response = HashMap<String, String>()
+                    val response = HashMap<String, Any>()
                     //mem
-                    if (request.contains("freeSpace")) response["freeSpace"] =
-                        totalMemory().toString()
-                    if (request.contains("totalSpace")) response["totalSpace"] =
-                        totalMemory().toString()
+                    response["freeSpace"] = totalMemory()
+                    response["totalSpace"] = totalMemory()
                     if (request.contains("urlList")) response["urlList"] =
                         InstaCameraManager.getInstance().allUrlList.toString()
                     //ret
