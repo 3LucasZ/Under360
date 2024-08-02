@@ -96,15 +96,4 @@
             android:text="No live status received"
             android:textSize="25sp"/>
     </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center">
-
-        <ImageView
-            android:id="@+id/image_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="Stream" />
-    </LinearLayout>
 </LinearLayout>

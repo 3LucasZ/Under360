@@ -56,7 +56,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var stopPreviewBtn: Button? = null
     private var livestreamStatusText: TextView? = null
     private var previewView: InstaCapturePlayerView? = null
-    lateinit var imageView: ImageView
 
     //---State---
     //-Stream State-
@@ -122,7 +121,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
         livestreamStatusText = findViewById(R.id.tv_live_status)
-        imageView = findViewById(R.id.image_view)
 
 //        //Infinite loop to update top bar UI with latest information
 //        val thread: Thread = object : Thread() {
@@ -204,15 +202,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/showPreview"){
-//                    imageView.setImageBitmap(convertImageByteArrayToBitmap(previewVideoData))
-                    Log.w("base64",previewImageStr)
-                    Log.w("base64len", (previewImageStr.length.toString()))
                     val response = HashMap<String, Any>()
-//                    response["data"]=previewVideoData
-//                    response["data2"] = previewVideoData.contentToString()
-//                    response["data3"] = String(Base64.getEncoder().encode(previewVideoData))
                     response["data"] = previewImageStr;
-//                    imageView.setImageBitmap(_imageBitmap)
                     call.respond(response)
                 }
                 //-Export Routes-
@@ -455,11 +446,11 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         }
     }
     //-Preview callbacks-
+    //Stream is loading
     private var mImageReader: ImageReader? = null
     private var mImageReaderHandlerThread: HandlerThread? = null
     private var mImageReaderHandler: Handler? = null
     private var imageCounter = 0;
-    //Stream is loading
     override fun onOpening() {
         createSurfaceView()
     }
