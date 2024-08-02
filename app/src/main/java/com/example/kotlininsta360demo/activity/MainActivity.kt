@@ -423,7 +423,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             .setMediaOffset(InstaCameraManager.getInstance().mediaOffset)
             .setCameraSelfie(InstaCameraManager.getInstance().isCameraSelfie)
             .setLive(false)
-            .setStabType(InstaStabType.STAB_TYPE_CALIBRATE_HORIZON)
+            .setStabType(InstaStabType.STAB_TYPE_AUTO)
             .setResolutionParams(1024, 512, 10)
             //hack
             .setRenderModelType(CaptureParamsBuilder.RENDER_MODE_PLANE_STITCH).setScreenRatio(2, 1)
