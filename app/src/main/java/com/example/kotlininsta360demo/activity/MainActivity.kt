@@ -1,7 +1,6 @@
 package com.example.kotlininsta360demo.activity
 
 
-import android.R.attr.bitmap
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
@@ -22,7 +21,6 @@ import com.arashivision.sdkcamera.camera.callback.ILiveStatusListener
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener
 import com.arashivision.sdkcamera.camera.live.LiveParamsBuilder
 import com.arashivision.sdkcamera.camera.preview.PreviewParamsBuilder
-import com.arashivision.sdkcamera.camera.preview.VideoData
 import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution
 import com.arashivision.sdkmedia.InstaMediaSDK
 import com.arashivision.sdkmedia.export.ExportImageParamsBuilder
@@ -46,7 +44,6 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
-import java.util.Base64
 
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
@@ -90,9 +87,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             .toString() + "/SDK_DEMO_EXPORT/"
     //-Preview State-
     var previewMode = 0; //NORMAL: 0, VIDEO: 1, STREAM: 2
-    lateinit var previewVideoData: ByteArray;
-    lateinit var _imageBitmap: Bitmap;
-    lateinit var imageStr: String;
+    lateinit var previewImageStr: String;
 
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
@@ -210,14 +205,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/showPreview"){
 //                    imageView.setImageBitmap(convertImageByteArrayToBitmap(previewVideoData))
-                    Log.w("byteArray", previewVideoData.contentToString())
-                    Log.w("base64",imageStr)
-                    Log.w("base64len", (imageStr.length.toString()))
+                    Log.w("base64",previewImageStr)
+                    Log.w("base64len", (previewImageStr.length.toString()))
                     val response = HashMap<String, Any>()
 //                    response["data"]=previewVideoData
 //                    response["data2"] = previewVideoData.contentToString()
 //                    response["data3"] = String(Base64.getEncoder().encode(previewVideoData))
-                    response["data"] = imageStr;
+                    response["data"] = previewImageStr;
 //                    imageView.setImageBitmap(_imageBitmap)
                     call.respond(response)
                 }
@@ -452,7 +446,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
 
     //---CALLBACKS---
-    //Main activity is no longer being viewed callback
+    //-Main activity is no longer being viewed callback-
     override fun onStop() {
         super.onStop()
         if (isFinishing) {
@@ -460,15 +454,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             stopLivestream()
         }
     }
-
-    //Preview callbacks
-    //Steam started and playable
+    //-Preview callbacks-
     private var mImageReader: ImageReader? = null
     private var mImageReaderHandlerThread: HandlerThread? = null
     private var mImageReaderHandler: Handler? = null
     private var imageCounter = 0;
-    @SuppressLint("WrongConstant")
+    //Stream is loading
     override fun onOpening() {
+        createSurfaceView()
+    }
+    private fun createSurfaceView() {
         if (mImageReader != null) {
             return;
         }
@@ -491,8 +486,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     )
                     bitmap.copyPixelsFromBuffer(plane.buffer)
                     //Here you have the preview as bitmap with equirectangular format
-                    _imageBitmap = bitmap
-                    imageStr = ImageUtil.convert(bitmap)
+                    previewImageStr = ImageUtil.convert(bitmap)
                     image.close()
                 } else {
                     image.close()
@@ -501,6 +495,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             imageCounter++
         }, mImageReaderHandler)
     }
+    //Steam started and playable
     override fun onOpened() {
         InstaCameraManager.getInstance().setStreamEncode()
         previewView!!.setPlayerViewListener(object : PlayerViewListener {
@@ -525,64 +520,43 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView!!.play()
         previewView!!.keepScreenOn = true
     }
-
-    override fun onVideoData(videoData: VideoData?) {
-        // Callback frequency 500Hz
-        // videoData.timestamp: The time since the camera was turned on
-        // videoData.data: Preview raw stream data every frame
-        // videoData.size: videoData.data.length
-
-        if (videoData != null) {
-            previewVideoData = videoData.data
-        }
-    }
-
-    //Camera status changed callback
+    //-Camera status changed callback-
     override fun onCameraStatusChanged(enabled: Boolean) {
         super.onCameraStatusChanged(enabled)
         if (!enabled) {
             stopLivestream()
         }
     }
-
-    //Live callbacks
+    //-Live Callbacks-
     @SuppressLint("SetTextI18n")
     override fun onLivePushError(error: Int, desc: String?) {
         livestreamStatusText?.text = "Live Push Error: ($error) ($desc)"
     }
-
     @SuppressLint("SetTextI18n")
     override fun onLiveFpsUpdate(fps: Int) {
         livestreamFPS = fps
         livestreamStatusText?.text = "FPS: $fps"
     }
-
     @SuppressLint("SetTextI18n")
     override fun onLivePushStarted() {
         livestreamStatusText?.text = "Live Push Started"
     }
-
     @SuppressLint("SetTextI18n")
     override fun onLivePushFinished() {
         livestreamStatusText?.text = "Live Push Finished"
     }
-
-    //Export callbacks
+    //-Export callbacks-
     override fun onSuccess() {
         Log.w("EXPORT CALLBACK", "ON SUCCESS")
     }
-
     override fun onFail(p0: Int, p1: String?) {
         Log.w("EXPORT CALLBACK", "ON FAIL: $p0 | $p1")
     }
-
     override fun onCancel() {
         Log.w("EXPORT CALLBACK", "ON CANCEL")
     }
-
     override fun onProgress(progress: Float) {
         Log.w("EXPORT CALLBACK", "ON PROGRESS: $progress")
         exportProgress = progress.toDouble()
     }
-
 }
