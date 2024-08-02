@@ -1,12 +1,20 @@
 package com.example.kotlininsta360demo.activity
 
 
+import android.R.attr.bitmap
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.PixelFormat
+import android.media.Image
+import android.media.ImageReader
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.StatFs
 import android.util.Log
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
@@ -14,6 +22,7 @@ import com.arashivision.sdkcamera.camera.callback.ILiveStatusListener
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener
 import com.arashivision.sdkcamera.camera.live.LiveParamsBuilder
 import com.arashivision.sdkcamera.camera.preview.PreviewParamsBuilder
+import com.arashivision.sdkcamera.camera.preview.VideoData
 import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution
 import com.arashivision.sdkmedia.InstaMediaSDK
 import com.arashivision.sdkmedia.export.ExportImageParamsBuilder
@@ -24,8 +33,8 @@ import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
-import com.arashivision.sdkmedia.work.WorkUtils
 import com.arashivision.sdkmedia.work.WorkWrapper
+import com.example.kotlininsta360demo.ImageUtil
 import com.example.kotlininsta360demo.R
 import com.example.kotlininsta360demo.formatSize
 import io.ktor.application.call
@@ -37,11 +46,12 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
+import java.util.Base64
 
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
     IExportCallback, PlayerViewListener {
-    //UI components to assign to later
+    //---UI Components (assigned later)---
     private var connectBtn: Button? = null
     private var disconnectBtn: Button? = null
     private var captureBtn: Button? = null
@@ -49,12 +59,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var stopPreviewBtn: Button? = null
     private var livestreamStatusText: TextView? = null
     private var previewView: InstaCapturePlayerView? = null
+    lateinit var imageView: ImageView
 
-    //streaming state
+    //---State---
+    //-Stream State-
     private var previewResolution: PreviewStreamResolution? = null
     private var livestreamFPS: Int = 0
-
-    //streaming configuration
+    //-Stream Config-
     private val rtmp = "rtmp://a.rtmp.youtube.com/live2/g1eg-y0x6-r3e9-mfr3-6twg"
     private val width = 1920
     private val height = 1080
@@ -69,27 +80,30 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         .setFps(fps)
         .setBitrate(bitRate)
         .setPanorama(panorama)
-
-    //export state
+    //-Export State-
     private var exportId = -1
     private var exportProgress = 0.0
     private var exportWorkWrapper = WorkWrapper("")
-
-    //export configuration
+    //-Export Config-
     private val exportDirPath =
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             .toString() + "/SDK_DEMO_EXPORT/"
+    //-Preview State-
+    var previewMode = 0; //NORMAL: 0, VIDEO: 1, STREAM: 2
+    lateinit var previewVideoData: ByteArray;
+    lateinit var _imageBitmap: Bitmap;
+    lateinit var imageStr: String;
 
-    //Initialize (run on app load)
+    //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
-        //base
+        //-Base-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        //init camera SDK
+        //-Initialize Camera SDK-
         InstaCameraSDK.init(this.application)
         InstaMediaSDK.init(this.application)
-        //set UI as variables and assign their behavior
+        //-Mobilize UI-
         connectBtn = findViewById(R.id.btn_connect)
         connectBtn?.setOnClickListener {
             connectCamera()
@@ -104,15 +118,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         }
         startPreviewBtn = findViewById(R.id.btn_start_preview)
         startPreviewBtn?.setOnClickListener {
-            startPreview()
+            startPreviewLive()
         }
         stopPreviewBtn = findViewById(R.id.btn_stop_preview)
         stopPreviewBtn?.setOnClickListener {
-            stopPreview()
+            stopLivestream()
         }
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
         livestreamStatusText = findViewById(R.id.tv_live_status)
+        imageView = findViewById(R.id.image_view)
 
 //        //Infinite loop to update top bar UI with latest information
 //        val thread: Thread = object : Thread() {
@@ -143,7 +158,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 get("/") {
                     call.respond(mapOf("msg" to "Welcome to Underwater API!"))
                 }
-                //---CONNECT--
+                //-Connect Routes-
                 get("/command/connect") {
                     connectCamera()
                     call.respond(mapOf("msg" to "ok"))
@@ -152,7 +167,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     disconnectCamera()
                     call.respond(mapOf("msg" to "ok"))
                 }
-                //--CAPTURE--
+                //-Capture Routes-
                 get("/command/capture") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
                         captureImage()
@@ -178,14 +193,35 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     }
                 }
                 get("/command/startLive") {
-                    startPreview()
+                    startPreviewLive()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/stopLive") {
-                    stopPreview()
+                    stopLivestream()
                     call.respond(mapOf("msg" to "ok"))
                 }
-                //--EXPORT--
+                get("/command/startPreviewNormal") {
+                    startPreviewNormal()
+                    call.respond(mapOf("msg" to "ok"))
+                }
+                get("/command/stopPreviewNormal") {
+                    stopPreviewNormal()
+                    call.respond(mapOf("msg" to "ok"))
+                }
+                get("/command/showPreview"){
+//                    imageView.setImageBitmap(convertImageByteArrayToBitmap(previewVideoData))
+                    Log.w("byteArray", previewVideoData.contentToString())
+                    Log.w("base64",imageStr)
+                    Log.w("base64len", (imageStr.length.toString()))
+                    val response = HashMap<String, Any>()
+//                    response["data"]=previewVideoData
+//                    response["data2"] = previewVideoData.contentToString()
+//                    response["data3"] = String(Base64.getEncoder().encode(previewVideoData))
+                    response["data"] = imageStr;
+//                    imageView.setImageBitmap(_imageBitmap)
+                    call.respond(response)
+                }
+                //-Export Routes-
                 get("/ls"){
                     val response = HashMap<String, Any>()
                     response["rawUrlList"] = InstaCameraManager.getInstance().rawUrlList;
@@ -262,7 +298,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             )
                     }
                 }
-                //--STATUS--
+                //-Status Routes-
                 get("/status/camera") {
                     val response = HashMap<String, Any>()
                     //connection
@@ -329,7 +365,26 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         InstaCameraManager.getInstance().stopNormalRecord()
     }
 
-    private fun startPreview() {
+    private fun startPreviewNormal() {
+        previewMode = 0
+        val list = InstaCameraManager.getInstance()
+            .getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL)
+        if (list.isNotEmpty()) {
+            InstaCameraManager.getInstance().setPreviewStatusChangedListener(this)
+            previewResolution = list[0]
+            val previewSettings = PreviewParamsBuilder()
+                .setStreamResolution(previewResolution)
+                .setPreviewType(InstaCameraManager.PREVIEW_TYPE_NORMAL)
+                .setAudioEnabled(false)
+            InstaCameraManager.getInstance().startPreviewStream(previewSettings)
+        }
+    }
+    private fun stopPreviewNormal() {
+        InstaCameraManager.getInstance().closePreviewStream()
+        InstaCameraManager.getInstance().setPreviewStatusChangedListener(null)
+    }
+    private fun startPreviewLive() {
+        previewMode = 2
         val list = InstaCameraManager.getInstance()
             .getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_LIVE)
         if (list.isNotEmpty()) {
@@ -343,7 +398,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         }
     }
 
-    private fun stopPreview() {
+    private fun stopLivestream() {
         //stop live
         InstaCameraManager.getInstance().stopLive()
         //stop preview
@@ -357,7 +412,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
 
     //---HELPERS---
-    private fun createParams(): CaptureParamsBuilder? {
+    private fun createLiveParams(): CaptureParamsBuilder? {
         return CaptureParamsBuilder()
             .setCameraType(InstaCameraManager.getInstance().cameraType)
             .setMediaOffset(InstaCameraManager.getInstance().mediaOffset)
@@ -377,6 +432,19 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             )
     }
 
+    private fun  createNormalParams(): CaptureParamsBuilder? {
+        return  CaptureParamsBuilder()
+            .setCameraType(InstaCameraManager.getInstance().cameraType)
+            .setMediaOffset(InstaCameraManager.getInstance().mediaOffset)
+            .setCameraSelfie(InstaCameraManager.getInstance().isCameraSelfie)
+            .setLive(false)
+            .setStabType(InstaStabType.STAB_TYPE_CALIBRATE_HORIZON)
+            .setResolutionParams(1024, 512, 10)
+            //hack
+            .setRenderModelType(CaptureParamsBuilder.RENDER_MODE_PLANE_STITCH).setScreenRatio(2, 1)
+            .setCameraRenderSurfaceInfo(mImageReader!!.surface, mImageReader!!.width, mImageReader!!.height);
+    }
+
     private fun totalMemory(): Long { //TODO: NOT FINISHED, CHECKOUT https://stackoverflow.com/questions/7115016/how-to-find-the-amount-of-free-storage-disk-space-left-on-android
         val statFs = StatFs(Environment.getRootDirectory().absolutePath)
         return (statFs.blockCountLong * statFs.blockSizeLong)
@@ -389,34 +457,91 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         super.onStop()
         if (isFinishing) {
             // Auto close preview since page loses focus
-            stopPreview()
+            stopLivestream()
         }
     }
 
-    //Preview callback
+    //Preview callbacks
     //Steam started and playable
+    private var mImageReader: ImageReader? = null
+    private var mImageReaderHandlerThread: HandlerThread? = null
+    private var mImageReaderHandler: Handler? = null
+    private var imageCounter = 0;
+    @SuppressLint("WrongConstant")
+    override fun onOpening() {
+        if (mImageReader != null) {
+            return;
+        }
+        mImageReaderHandlerThread = HandlerThread("camera render surface")
+        mImageReaderHandlerThread!!.start()
+        mImageReaderHandler = Handler(mImageReaderHandlerThread!!.looper)
+        mImageReader = ImageReader.newInstance(1024, 512, PixelFormat.RGBA_8888, 2)
+        mImageReader!!.setOnImageAvailableListener({ reader ->
+            if (reader.maxImages > 0) {
+                val image: Image = reader.acquireLatestImage()
+                if (imageCounter % 3 == 0) {
+                    val plane: Image.Plane = image.planes[0]
+                    val pixelStride: Int = plane.pixelStride
+                    val rowStride: Int = plane.rowStride
+                    val rowPadding: Int = rowStride - pixelStride * image.width
+                    val bitmap = Bitmap.createBitmap(
+                        image.width + rowPadding / pixelStride,
+                        image.height,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    bitmap.copyPixelsFromBuffer(plane.buffer)
+                    //Here you have the preview as bitmap with equirectangular format
+                    _imageBitmap = bitmap
+                    imageStr = ImageUtil.convert(bitmap)
+                    image.close()
+                } else {
+                    image.close()
+                }
+            }
+            imageCounter++
+        }, mImageReaderHandler)
+    }
     override fun onOpened() {
         InstaCameraManager.getInstance().setStreamEncode()
         previewView!!.setPlayerViewListener(object : PlayerViewListener {
             override fun onLoadingFinish() {
                 InstaCameraManager.getInstance().setPipeline(previewView!!.pipeline)
-                startLivestream()
+                if (previewMode == 2) {
+                    startLivestream()
+                }
             }
-
             override fun onReleaseCameraPipeline() {
                 InstaCameraManager.getInstance().setPipeline(null)
             }
         })
-        previewView!!.prepare(createParams())
+        if (previewMode == 0) {
+            previewView!!.prepare(createNormalParams())
+        }
+        else if (previewMode == 2){
+            previewView!!.prepare(createLiveParams())
+        } else {
+            previewView!!.prepare(createNormalParams())
+        }
         previewView!!.play()
         previewView!!.keepScreenOn = true
+    }
+
+    override fun onVideoData(videoData: VideoData?) {
+        // Callback frequency 500Hz
+        // videoData.timestamp: The time since the camera was turned on
+        // videoData.data: Preview raw stream data every frame
+        // videoData.size: videoData.data.length
+
+        if (videoData != null) {
+            previewVideoData = videoData.data
+        }
     }
 
     //Camera status changed callback
     override fun onCameraStatusChanged(enabled: Boolean) {
         super.onCameraStatusChanged(enabled)
         if (!enabled) {
-            stopPreview()
+            stopLivestream()
         }
     }
 
@@ -459,4 +584,5 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         Log.w("EXPORT CALLBACK", "ON PROGRESS: $progress")
         exportProgress = progress.toDouble()
     }
+
 }
