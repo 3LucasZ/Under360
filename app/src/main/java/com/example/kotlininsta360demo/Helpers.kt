@@ -1,7 +1,12 @@
 package com.example.kotlininsta360demo
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 
-    fun formatSize(size: Long): String {
+
+fun formatSize(size: Long): String {
         var size = size
         var suffix: String? = null
         if (size >= 1024) {
@@ -25,3 +30,24 @@ package com.example.kotlininsta360demo
         if (suffix != null) resultBuffer.append(suffix)
         return resultBuffer.toString()
     }
+
+fun convertImageByteArrayToBitmap(imageData: ByteArray): Bitmap {
+    return BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+}
+
+
+object ImageUtil {
+    fun convert(base64Str: String): Bitmap {
+        val decodedBytes = Base64.decode(
+            base64Str.substring(base64Str.indexOf(",") + 1),
+            Base64.DEFAULT
+        )
+        return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+    }
+
+    fun convert(bitmap: Bitmap): String {
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
+    }
+}
