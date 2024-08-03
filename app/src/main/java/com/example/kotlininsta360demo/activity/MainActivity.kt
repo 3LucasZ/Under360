@@ -131,6 +131,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         stopPreviewBtn = findViewById(R.id.btn_stop_preview)
         stopPreviewBtn?.setOnClickListener {
             stopLivestream()
+            stopPreview()
         }
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
@@ -211,12 +212,22 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         call.respond(mapOf("err" to "camera not connected"))
                     }
                 }
+//                get("/command/startLive") {
+//                    startPreviewLive()
+//                    call.respond(mapOf("msg" to "ok"))
+//                }
+//                get("/command/stopLive") {
+//                    stopLivestream()
+//                    call.respond(mapOf("msg" to "ok"))
+//                }
                 get("/command/startLive") {
+                    stopPreview()
                     startPreviewLive()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/stopLive") {
                     stopLivestream()
+                    stopPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/startPreviewNormal") {
@@ -224,7 +235,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/stopPreviewNormal") {
-                    stopPreviewNormal()
+                    stopPreview()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/showPreview"){
@@ -417,9 +428,11 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             InstaCameraManager.getInstance().startPreviewStream(previewSettings)
         }
     }
-    private fun stopPreviewNormal() {
+    private fun stopPreview() {
+        //stop preview
         InstaCameraManager.getInstance().closePreviewStream()
         InstaCameraManager.getInstance().setPreviewStatusChangedListener(null)
+        previewView!!.destroy()
     }
     private fun startPreviewLive() {
         previewMode = 2
@@ -437,12 +450,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
 
     private fun stopLivestream() {
-        //stop live
         InstaCameraManager.getInstance().stopLive()
-        //stop preview
-        InstaCameraManager.getInstance().closePreviewStream()
-        InstaCameraManager.getInstance().setPreviewStatusChangedListener(null)
-        previewView!!.destroy()
     }
 
     private fun startLivestream() {
@@ -481,7 +489,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             //hack
             .setRenderModelType(CaptureParamsBuilder.RENDER_MODE_PLANE_STITCH).setScreenRatio(2, 1)
             .setCameraRenderSurfaceInfo(mImageReader!!.surface, mImageReader!!.width, mImageReader!!.height);
-            //TODO: Try to hack android.view.surface (RenderSurface) to RTMP stream to custom server super fast
+            //TODO: (Experimental) hack android.view.surface (RenderSurface) to RTMP stream to custom server super fast
     }
 
     private fun totalMemory(): Long { //TODO: NOT FINISHED, CHECKOUT https://stackoverflow.com/questions/7115016/how-to-find-the-amount-of-free-storage-disk-space-left-on-android
@@ -497,6 +505,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         if (isFinishing) {
             // Auto close preview since page loses focus
             stopLivestream()
+            stopPreview()
         }
     }
     //-Preview callbacks-
@@ -547,7 +556,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             }
         }, mImageReaderHandler)
     }
-    //Steam started and playable
+    //Stream started and playable
     override fun onOpened() {
         InstaCameraManager.getInstance().setStreamEncode()
         previewView!!.setPlayerViewListener(object : PlayerViewListener {
@@ -577,6 +586,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         super.onCameraStatusChanged(enabled)
         if (!enabled) {
             stopLivestream()
+            stopPreview()
         }
     }
     //-Live Callbacks-
