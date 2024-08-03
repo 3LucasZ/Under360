@@ -517,30 +517,34 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         mImageReaderHandler = Handler(mImageReaderHandlerThread!!.looper)
         mImageReader = ImageReader.newInstance(1024, 512, PixelFormat.RGBA_8888, 2)
         mImageReader!!.setOnImageAvailableListener({ reader ->
-            if (reader.maxImages > 0) {
-                val image = reader.acquireLatestImage()
-                if (image == null) { //every once in a while, the image is null. This will break the app, so we catch it carefully here.
-                    println("NULL")
+            try {
+                if (reader.maxImages > 0) {
+                    val image = reader.acquireLatestImage()
+                    if (image == null) { //every once in a while, the image is null. This will break the app, so we catch it carefully here.
+                        println("NULL")
+                    }
+                    else if (imageCounter % 3 == 0) {
+                        val plane: Image.Plane = image.planes[0]
+                        val pixelStride: Int = plane.pixelStride
+                        val rowStride: Int = plane.rowStride
+                        val rowPadding: Int = rowStride - pixelStride * image.width
+                        val bitmap = Bitmap.createBitmap(
+                            image.width + rowPadding / pixelStride,
+                            image.height,
+                            Bitmap.Config.ARGB_8888
+                        )
+                        bitmap.copyPixelsFromBuffer(plane.buffer)
+                        //Here you have the preview as bitmap with equirectangular format
+                        previewImageStr = ImageUtil.convert(bitmap)
+                        image.close()
+                    } else {
+                        image.close()
+                    }
                 }
-                else if (imageCounter % 3 == 0) {
-                    val plane: Image.Plane = image.planes[0]
-                    val pixelStride: Int = plane.pixelStride
-                    val rowStride: Int = plane.rowStride
-                    val rowPadding: Int = rowStride - pixelStride * image.width
-                    val bitmap = Bitmap.createBitmap(
-                        image.width + rowPadding / pixelStride,
-                        image.height,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    bitmap.copyPixelsFromBuffer(plane.buffer)
-                    //Here you have the preview as bitmap with equirectangular format
-                    previewImageStr = ImageUtil.convert(bitmap)
-                    image.close()
-                } else {
-                    image.close()
-                }
+                imageCounter++
+            } catch (e: Throwable) {
+                Log.w("Fatal error catch",e.toString())
             }
-            imageCounter++
         }, mImageReaderHandler)
     }
     //Steam started and playable
