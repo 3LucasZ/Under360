@@ -519,7 +519,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         mImageReader!!.setOnImageAvailableListener({ reader ->
             if (reader.maxImages > 0) {
                 val image = reader.acquireLatestImage()
-                if (imageCounter % 3 == 0 && image != null) {
+                if (image == null) { //every once in a while, the image is null. This will break the app, so we catch it carefully here.
+                    println("NULL")
+                }
+                else if (imageCounter % 3 == 0) {
                     val plane: Image.Plane = image.planes[0]
                     val pixelStride: Int = plane.pixelStride
                     val rowStride: Int = plane.rowStride
