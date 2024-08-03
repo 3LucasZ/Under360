@@ -97,9 +97,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             .toString() + "/SDK_DEMO_EXPORT/"
     //-Preview State-
     var previewMode = 0; //NORMAL: 0, VIDEO: 1, STREAM: 2
-    lateinit var previewImageStr: String;
+    var previewImageStr: String = "";
     //-General State-
     var action = "Idle"
+    var connections = 0
 
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
@@ -135,14 +136,40 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView!!.setLifecycle(lifecycle)
         livestreamStatusText = findViewById(R.id.tv_live_status)
 
-        //---API ROUTES---
-        embeddedServer(Jetty, 8080) {
+        //---WS STREAMER--
+        embeddedServer(Jetty, 8081) {
             install(WebSockets) {
                 pingPeriod = Duration.ofSeconds(15)
-                timeout = Duration.ofSeconds(15)
+                timeout = Duration.ofSeconds(10000000000)
                 maxFrameSize = Long.MAX_VALUE
                 masking = false
             }
+            routing {
+                webSocket("/stream") {
+                    if (connections >= 1) {
+                        close(CloseReason(CloseReason.Codes.NORMAL, "Too many clients!!"))
+                    } else {
+                        connections += 1
+                        Log.w("websocket","websocket connected")
+                        try {
+                            while (true) {
+                                Thread.sleep(200)
+                                send(previewImageStr)
+                            }
+                        }catch (e: ClosedReceiveChannelException) {
+                            println("onClose ${closeReason.await()}")
+                            connections -= 1
+                        } catch (e: Throwable) {
+                            println("onError ${closeReason.await()}")
+                            connections -= 1
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
+        }.start(wait = false)
+        //---API ROUTES---
+        embeddedServer(Jetty, 8080) {
             install(ContentNegotiation) {
                 gson()
             }
@@ -204,36 +231,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val response = HashMap<String, Any>()
                     response["data"] = previewImageStr;
                     call.respond(response)
-                }
-                webSocket("/stream") {
-                    Log.w("websocket","websocket connected")
-                    try {
-                        while (true) {
-                            Thread.sleep(1_000)
-                            send("<Stream content>")
-                        }
-                    }catch (e: ClosedReceiveChannelException) {
-                        println("onClose ${closeReason.await()}")
-                    } catch (e: Throwable) {
-                        println("onError ${closeReason.await()}")
-                        e.printStackTrace()
-                    }
-                }
-                webSocket("/command/streamPreview"){
-                    println("onConnect")
-                    try {
-                        for (frame in incoming){
-                            val text = (frame as Frame.Text).readText()
-                            println("onMessage")
-                            outgoing.send(Frame.Text(text))
-//                            outgoing.send(Frame.Text(previewImageStr))
-                        }
-                    } catch (e: ClosedReceiveChannelException) {
-                        println("onClose ${closeReason.await()}")
-                    } catch (e: Throwable) {
-                        println("onError ${closeReason.await()}")
-                        e.printStackTrace()
-                    }
                 }
                 //-Export Routes-
                 get("/ls"){
@@ -484,6 +481,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             //hack
             .setRenderModelType(CaptureParamsBuilder.RENDER_MODE_PLANE_STITCH).setScreenRatio(2, 1)
             .setCameraRenderSurfaceInfo(mImageReader!!.surface, mImageReader!!.width, mImageReader!!.height);
+            //TODO: Try to hack android.view.surface (RenderSurface) to RTMP stream to custom server super fast
     }
 
     private fun totalMemory(): Long { //TODO: NOT FINISHED, CHECKOUT https://stackoverflow.com/questions/7115016/how-to-find-the-amount-of-free-storage-disk-space-left-on-android
@@ -520,8 +518,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         mImageReader = ImageReader.newInstance(1024, 512, PixelFormat.RGBA_8888, 2)
         mImageReader!!.setOnImageAvailableListener({ reader ->
             if (reader.maxImages > 0) {
-                val image: Image = reader.acquireLatestImage()
-                if (imageCounter % 3 == 0) {
+                val image = reader.acquireLatestImage()
+                if (imageCounter % 3 == 0 && image != null) {
                     val plane: Image.Plane = image.planes[0]
                     val pixelStride: Int = plane.pixelStride
                     val rowStride: Int = plane.rowStride
