@@ -48,6 +48,13 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readText
+import io.ktor.websocket.send
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import java.time.Duration
 
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
@@ -130,7 +137,12 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
         //---API ROUTES---
         embeddedServer(Jetty, 8080) {
-            install(WebSockets)
+            install(WebSockets) {
+                pingPeriod = Duration.ofSeconds(15)
+                timeout = Duration.ofSeconds(15)
+                maxFrameSize = Long.MAX_VALUE
+                masking = false
+            }
             install(ContentNegotiation) {
                 gson()
             }
@@ -192,6 +204,40 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val response = HashMap<String, Any>()
                     response["data"] = previewImageStr;
                     call.respond(response)
+                }
+                webSocket("/echo") {
+                    Log.w("/echo","websocket echo connected")
+                    send("Please enter your name")
+                    while (true) {
+                        Thread.sleep(1_000)
+                        send("Please enter your name")
+                    }
+//                    for (frame in incoming) {
+//                        Log.w("/echo","websocket echo received")
+//                        frame as? Frame.Text ?: continue
+//                        val receivedText = frame.readText()
+//                        if (receivedText.equals("bye", ignoreCase = true)) {
+//                            close(CloseReason(CloseReason.Codes.NORMAL, "Client said BYE"))
+//                        } else {
+//                            send("Hi, $receivedText!")
+//                        }
+//                    }
+                }
+                webSocket("/command/streamPreview"){
+                    println("onConnect")
+                    try {
+                        for (frame in incoming){
+                            val text = (frame as Frame.Text).readText()
+                            println("onMessage")
+                            outgoing.send(Frame.Text(text))
+//                            outgoing.send(Frame.Text(previewImageStr))
+                        }
+                    } catch (e: ClosedReceiveChannelException) {
+                        println("onClose ${closeReason.await()}")
+                    } catch (e: Throwable) {
+                        println("onError ${closeReason.await()}")
+                        e.printStackTrace()
+                    }
                 }
                 //-Export Routes-
                 get("/ls"){
@@ -339,7 +385,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(response)
                 }
             }
-        }.start(wait = false)
+        }.start(wait = true)
     }
 
 
