@@ -238,16 +238,19 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val request = call.request.queryParameters
                     val url = request["url"]
                     Log.w("url", url.toString())
+                    // check camera
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    }
                     // check url
                     val workWrapper = WorkWrapper(url)
-                    val fileUrls = workWrapper.urlsForDelete
-                    InstaCameraManager.getInstance().deleteFile(url, this@MainActivity)
-
-                    val response = HashMap<String, Any>()
-                    val prefix = InstaCameraManager.getInstance().cameraHttpPrefix;
-                    val urls = InstaCameraManager.getInstance().allUrlList.map{prefix + it};
-                    response["data"] = urls
-                    call.respond(response)
+                    if (workWrapper.height <= 10) {
+                        call.respond(mapOf("err" to "url does not exist"))
+                    }
+                    //delete file
+                    val fileUrls = listOf(*workWrapper.urlsForDelete)
+                    InstaCameraManager.getInstance().deleteFileList(fileUrls, this@MainActivity)
+                    call.respond(mapOf("msg" to "ok"))
                 }
                 get("/export/image") {
                     val request = call.request.queryParameters
