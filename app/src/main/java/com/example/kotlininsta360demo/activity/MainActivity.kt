@@ -205,23 +205,19 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["data"] = previewImageStr;
                     call.respond(response)
                 }
-                webSocket("/echo") {
-                    Log.w("/echo","websocket echo connected")
-                    send("Please enter your name")
-                    while (true) {
-                        Thread.sleep(1_000)
-                        send("Please enter your name")
+                webSocket("/stream") {
+                    Log.w("websocket","websocket connected")
+                    try {
+                        while (true) {
+                            Thread.sleep(1_000)
+                            send("<Stream content>")
+                        }
+                    }catch (e: ClosedReceiveChannelException) {
+                        println("onClose ${closeReason.await()}")
+                    } catch (e: Throwable) {
+                        println("onError ${closeReason.await()}")
+                        e.printStackTrace()
                     }
-//                    for (frame in incoming) {
-//                        Log.w("/echo","websocket echo received")
-//                        frame as? Frame.Text ?: continue
-//                        val receivedText = frame.readText()
-//                        if (receivedText.equals("bye", ignoreCase = true)) {
-//                            close(CloseReason(CloseReason.Codes.NORMAL, "Client said BYE"))
-//                        } else {
-//                            send("Hi, $receivedText!")
-//                        }
-//                    }
                 }
                 webSocket("/command/streamPreview"){
                     println("onConnect")
@@ -385,7 +381,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(response)
                 }
             }
-        }.start(wait = true)
+        }.start(wait = false)
     }
 
 
