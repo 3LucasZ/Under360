@@ -13,10 +13,10 @@ import android.os.HandlerThread
 import android.os.StatFs
 import android.util.Log
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.TextView
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
+import com.arashivision.sdkcamera.camera.callback.ICameraOperateCallback
 import com.arashivision.sdkcamera.camera.callback.ILiveStatusListener
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener
 import com.arashivision.sdkcamera.camera.live.LiveParamsBuilder
@@ -34,7 +34,6 @@ import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 import com.arashivision.sdkmedia.work.WorkWrapper
 import com.example.kotlininsta360demo.ImageUtil
 import com.example.kotlininsta360demo.R
-import com.example.kotlininsta360demo.formatSize
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
@@ -44,10 +43,11 @@ import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
+import java.util.Arrays
 
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
-    IExportCallback, PlayerViewListener {
+    IExportCallback, PlayerViewListener, ICameraOperateCallback {
     //---UI Components (assigned later)---
     private var connectBtn: Button? = null
     private var disconnectBtn: Button? = null
@@ -87,6 +87,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-Preview State-
     var previewMode = 0; //NORMAL: 0, VIDEO: 1, STREAM: 2
     lateinit var previewImageStr: String;
+    //-General State-
+    var action = "Idle"
 
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
@@ -121,26 +123,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
         livestreamStatusText = findViewById(R.id.tv_live_status)
-
-//        //Infinite loop to update top bar UI with latest information
-//        val thread: Thread = object : Thread() {
-//            @SuppressLint("SetTextI18n")
-//            override fun run() {
-//                try {
-//                    while (!this.isInterrupted) {
-//                        sleep(1000)
-//                        runOnUiThread {
-//                            // update TextView here!
-//                            findViewById<TextView>(R.id.tv_cam_status).text =
-//                                "T:" + System.currentTimeMillis() + ", Connected:" + InstaCameraManager.getInstance().cameraConnectedType + ", Battery:" + InstaCameraManager.getInstance().cameraCurrentBatteryLevel + ", Charging:" + InstaCameraManager.getInstance().isCameraCharging
-//                        }
-//                    }
-//                } catch (e: InterruptedException) {
-//                    Log.w("INTERRUPTED UPDATE THREAD",e)
-//                }
-//            }
-//        }
-//        thread.start()
 
         //---API ROUTES---
         embeddedServer(Jetty, 8080) {
@@ -209,10 +191,30 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 //-Export Routes-
                 get("/ls"){
                     val response = HashMap<String, Any>()
-                    response["rawUrlList"] = InstaCameraManager.getInstance().rawUrlList;
-                    response["allUrlList"] = InstaCameraManager.getInstance().allUrlList;
-                    response["allUrlListIncludeRecording"] = InstaCameraManager.getInstance().allUrlListIncludeRecording;
-                    response["cameraHttpPrefix"] = InstaCameraManager.getInstance().cameraHttpPrefix;
+                    val prefix = InstaCameraManager.getInstance().cameraHttpPrefix;
+                    val urls = InstaCameraManager.getInstance().allUrlList.map{prefix + it};
+                    response["data"] = urls
+                    call.respond(response)
+                }
+                get("/ls/verbose"){
+                    val response = HashMap<String, Any>()
+                    val prefix = InstaCameraManager.getInstance().cameraHttpPrefix;
+                    val urls = InstaCameraManager.getInstance().allUrlList.map{prefix + it};
+                    val data = mutableListOf<HashMap<String,Any>>();
+                    for (url in urls) {
+                        val workWrapper = WorkWrapper(url)
+                        val map = HashMap<String, Any>()
+                        map["url"] = url
+                        map["width"] = workWrapper.width;
+                        map["height"] = workWrapper.height;
+                        map["durationInMs"] = workWrapper.durationInMs;
+                        map["fps"] = workWrapper.fps
+                        map["fileSize"] = workWrapper.fileSize
+                        map["isPhoto"] = workWrapper.isPhoto
+                        map["delete"] = workWrapper.urlsForDelete
+                        data.add(map)
+                    }
+                    response["data"] = data
                     call.respond(response)
                 }
                 get("/inspect") {
@@ -221,27 +223,38 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     Log.w("url", url.toString())
                     val workWrapper = WorkWrapper(url)
                     val response = HashMap<String, Any>()
-                    response["urlsRaw"] = workWrapper.getUrls(true)
-                    response["urlsNotRaw"] = workWrapper.getUrls(false)
                     response["width"] = workWrapper.width
                     response["height"] = workWrapper.height
                     response["durationInMs"] = workWrapper.durationInMs
                     response["bitrate"] = workWrapper.bitrate
                     response["fps"] = workWrapper.fps
-                    response["isPhoto"] = workWrapper.isPhoto
-                    response["isVideo"] = workWrapper.isVideo
-                    response["isCameraFile"] = workWrapper.isCameraFile
-                    response["isLocalFile"] = workWrapper.isLocalFile
                     response["creationTime"] = workWrapper.creationTime
-                    response["isPanoramaFile"] = workWrapper.isPanoramaFile
+                    response["fileSize"] = workWrapper.fileSize
+                    response["delete"] = workWrapper.urlsForDelete
+                    call.respond(response)
+                }
+                get("/rm"){
+                    //get url
+                    val request = call.request.queryParameters
+                    val url = request["url"]
+                    Log.w("url", url.toString())
+                    // check url
+                    val workWrapper = WorkWrapper(url)
+                    val fileUrls = workWrapper.urlsForDelete
+                    InstaCameraManager.getInstance().deleteFile(url, this@MainActivity)
+
+                    val response = HashMap<String, Any>()
+                    val prefix = InstaCameraManager.getInstance().cameraHttpPrefix;
+                    val urls = InstaCameraManager.getInstance().allUrlList.map{prefix + it};
+                    response["data"] = urls
                     call.respond(response)
                 }
                 get("/export/image") {
                     val request = call.request.queryParameters
                     val response = HashMap<String, Any>()
                     val url = request["url"]
+                    Log.w("url", url.toString())
                     exportWorkWrapper = WorkWrapper(url)
-
                     if (!exportWorkWrapper.isPhoto) {
                         response["msg"] = "requested url is not a photo"
                     } else {
@@ -283,32 +296,25 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             )
                     }
                 }
+                get("/export/status") {
+                    val response = HashMap<String, Any>()
+                    //export
+                    response["exportId"] = exportId
+                    response["exportProgress"] = exportProgress
+                    //ret
+                    call.respond(response)
+                }
                 //-Status Routes-
                 get("/status/camera") {
                     val response = HashMap<String, Any>()
                     //connection
-                    InstaCameraManager.getInstance().cameraConnectedType
+                    response["connected"] = InstaCameraManager.getInstance().cameraConnectedType == InstaCameraManager.CONNECT_TYPE_USB
                     //battery
-                    InstaCameraManager.getInstance().cameraCurrentBatteryLevel
-                    InstaCameraManager.getInstance().isCameraCharging
+                    response["batteryLevel"] = InstaCameraManager.getInstance().cameraCurrentBatteryLevel
+                    response["isCharging"] = InstaCameraManager.getInstance().isCameraCharging
                     //mem
-                    InstaCameraManager.getInstance().isSdCardEnabled
-                    formatSize(InstaCameraManager.getInstance().cameraStorageFreeSpace)
-                    formatSize(InstaCameraManager.getInstance().cameraStorageTotalSpace)
-//                    InstaCameraManager.getInstance().allUrlList
-//                    WorkUtils.getAllCameraWorks(
-//                        InstaCameraManager.getInstance().cameraHttpPrefix,
-//                        InstaCameraManager.getInstance().cameraInfoMap,
-//                        InstaCameraManager.getInstance().allUrlList,
-//                        InstaCameraManager.getInstance().rawUrlList
-//                    ).toString()
-                    //livestream
-                    livestreamFPS.toString()
-                    //settings
-                    response["exportDirPath"] = exportDirPath
-                    //export
-                    response["exportId"] = exportId.toString()
-                    response["exportProgress"] = exportProgress.toString()
+                    response["freeSpace"] = InstaCameraManager.getInstance().cameraStorageFreeSpace
+                    response["totalSpace"] = InstaCameraManager.getInstance().cameraStorageTotalSpace
                     //ret
                     call.respond(response)
                 }
@@ -539,15 +545,28 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-Export callbacks-
     override fun onSuccess() {
         Log.w("EXPORT CALLBACK", "ON SUCCESS")
+        action = "Idle (export success)"
     }
     override fun onFail(p0: Int, p1: String?) {
         Log.w("EXPORT CALLBACK", "ON FAIL: $p0 | $p1")
+        action = "Idle (export fail) $p0 and $p1"
     }
     override fun onCancel() {
-        Log.w("EXPORT CALLBACK", "ON CANCEL")
+        action = "Idle (export cancel)"
     }
     override fun onProgress(progress: Float) {
         Log.w("EXPORT CALLBACK", "ON PROGRESS: $progress")
         exportProgress = progress.toDouble()
+    }
+
+    //-Delete callbacks-
+    override fun onSuccessful() {
+        action = "Idle (delete success)"
+    }
+    override fun onFailed() {
+        action = "Idle (delete failed)"
+    }
+    override fun onCameraConnectError() {
+        action = "Idle (delete cameraConnectError)"
     }
 }
