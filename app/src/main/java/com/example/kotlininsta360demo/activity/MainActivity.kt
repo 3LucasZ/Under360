@@ -14,6 +14,7 @@ import android.os.StatFs
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+//-Insta360-
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
 import com.arashivision.sdkcamera.camera.callback.ICameraOperateCallback
@@ -34,16 +35,19 @@ import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 import com.arashivision.sdkmedia.work.WorkWrapper
 import com.example.kotlininsta360demo.ImageUtil
 import com.example.kotlininsta360demo.R
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.features.ContentNegotiation
-import io.ktor.gson.gson
-import io.ktor.response.respond
-import io.ktor.routing.get
-import io.ktor.routing.routing
+import io.ktor.serialization.gson.gson
+//-Server-
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.jetty.Jetty
-import java.util.Arrays
+import io.ktor.server.websocket.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.jetty.*
+import io.ktor.server.application.*
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.routing.routing
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
@@ -126,8 +130,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
         //---API ROUTES---
         embeddedServer(Jetty, 8080) {
+            install(WebSockets)
             install(ContentNegotiation) {
-                gson {}
+                gson()
             }
             routing {
                 get("/") {
