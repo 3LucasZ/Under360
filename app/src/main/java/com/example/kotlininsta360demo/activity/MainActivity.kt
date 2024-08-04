@@ -411,15 +411,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         }
                     }
                 }
-                get("/export/status") {
-                    val response = HashMap<String, Any>()
-                    //export
-                    response["exporting"] = exporting
-                    response["exportId"] = exportId
-                    response["exportProgress"] = exportProgress
-                    //ret
-                    call.respond(response)
-                }
                 //-Status Routes-
                 get("/status") {
                     val response = HashMap<String, Any>()
@@ -431,6 +422,22 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     //mem
                     response["freeSpace"] = InstaCameraManager.getInstance().cameraStorageFreeSpace
                     response["totalSpace"] = InstaCameraManager.getInstance().cameraStorageTotalSpace
+                    //ret
+                    call.respond(response)
+                }
+                get("/status/operation") {
+                    val response = HashMap<String, Any>()
+                    response["captureStatus"] = captureStatus
+                    response["previewStatus"] = previewStatus
+                    //ret
+                    call.respond(response)
+                }
+                get("/export/status") {
+                    val response = HashMap<String, Any>()
+                    //export
+                    response["exporting"] = exporting
+                    response["exportId"] = exportId
+                    response["exportProgress"] = exportProgress
                     //ret
                     call.respond(response)
                 }
