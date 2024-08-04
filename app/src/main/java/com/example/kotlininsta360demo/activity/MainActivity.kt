@@ -36,6 +36,7 @@ import com.example.kotlininsta360demo.ImageUtil
 import com.example.kotlininsta360demo.MyCaptureStatus
 import com.example.kotlininsta360demo.MyPreviewStatus
 import com.example.kotlininsta360demo.R
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.gson.gson
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -153,12 +154,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 //-Capture Routes-
                 get("/command/capture") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (previewStatus == MyPreviewStatus.LIVE) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy livestreaming to Youtube"))
                     } else if (captureStatus == MyCaptureStatus.RECORD) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy recording"))
                     } else if (captureStatus == MyCaptureStatus.CAPTURE) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy capturing"))
                     } else {
                         captureStatus = MyCaptureStatus.CAPTURE
@@ -169,12 +174,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/startRecord") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (previewStatus == MyPreviewStatus.LIVE) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy streaming to Youtube"))
                     } else if (captureStatus == MyCaptureStatus.RECORD) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy recording"))
                     } else if (captureStatus == MyCaptureStatus.CAPTURE) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy capturing"))
                     } else {
                         captureStatus = MyCaptureStatus.RECORD
@@ -185,8 +194,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/stopRecord") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (captureStatus != MyCaptureStatus.RECORD) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not recording right now"))
                     } else {
                         InstaCameraManager.getInstance().stopNormalRecord()
@@ -195,10 +206,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/startLive") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (previewStatus == MyPreviewStatus.NORMAL){
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy streaming for preview"))
                     } else if (previewStatus == MyPreviewStatus.LIVE){
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy livestreaming to youtube"))
                     } else {
                         previewStatus = MyPreviewStatus.LIVE
@@ -208,8 +222,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/stopLive") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (previewStatus != MyPreviewStatus.LIVE){
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not livestreaming to youtube right now"))
                     } else {
                         stopLivestream()
@@ -219,10 +235,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/startPreviewNormal") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (previewStatus == MyPreviewStatus.NORMAL){
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy livestreaming for preview"))
                     } else if (previewStatus == MyPreviewStatus.LIVE){
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy livestreaming to youtube"))
                     } else {
                         previewStatus = MyPreviewStatus.NORMAL
@@ -232,8 +251,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/stopPreviewNormal") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (previewStatus != MyPreviewStatus.NORMAL){
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not livestreaming for preview right now"))
                     } else {
                         stopPreview()
@@ -247,11 +268,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 //-Export Routes-
                 get("/ls"){
-                    val response = HashMap<String, Any>()
-                    val prefix = InstaCameraManager.getInstance().cameraHttpPrefix;
-                    val urls = InstaCameraManager.getInstance().allUrlList.map{prefix + it};
-                    response["data"] = urls
-                    call.respond(response)
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else {
+                        val response = HashMap<String, Any>()
+                        val prefix = InstaCameraManager.getInstance().cameraHttpPrefix;
+                        val urls = InstaCameraManager.getInstance().allUrlList.map { prefix + it };
+                        response["data"] = urls
+                        call.respond(response)
+                    }
                 }
                 get("/ls/verbose"){
                     val response = HashMap<String, Any>()
@@ -297,11 +323,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     Log.w("url", url.toString())
                     // check camera
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else {
                         // check url
                         val workWrapper = WorkWrapper(url)
                         if (workWrapper.height <= 10) {
+                            call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "url does not exist"))
                         }
                         //delete file
@@ -320,14 +348,18 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     Log.w("url", url.toString())
                     // check camera
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (exporting) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy exporting"))
                     } else {
                         val exportWorkWrapper = WorkWrapper(url)
                         if (!exportWorkWrapper.isPhoto) {
+                            call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "requested file is not a photo"))
                         } else if (exportWorkWrapper.height <= 10) {
+                            call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "requested file does not exist"))
                         }else {
                             val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".jpg"
@@ -351,14 +383,18 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     Log.w("url", url.toString())
                     // check camera
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
                     } else if (exporting) {
+                        call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy exporting"))
                     }else {
                         val workWrapper = WorkWrapper(url)
                         if (!workWrapper.isVideo) {
+                            call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "requested file is not a video"))
                         } else if (workWrapper.height <= 10) {
+                            call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "requested file does not exist"))
                         } else {
                             val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".mp4"
