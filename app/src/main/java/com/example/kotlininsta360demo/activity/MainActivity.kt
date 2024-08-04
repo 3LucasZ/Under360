@@ -12,8 +12,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.StatFs
 import android.util.Log
-import android.widget.Button
-import android.widget.TextView
 //-Insta360-
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
@@ -53,13 +51,10 @@ import io.ktor.websocket.close
 import io.ktor.websocket.send
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.time.Duration
-
-
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
     IExportCallback, PlayerViewListener, ICameraOperateCallback {
     //---UI Components (assigned later)---
     private var previewView: InstaCapturePlayerView? = null
-
     //---State---
     //-Stream State-
     private var previewResolution: PreviewStreamResolution? = null
@@ -69,7 +64,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private val width = 1920
     private val height = 1080
     private val fps = 30
-    private val bitRate = 18 * 1024 * 1024
+    private val bitRate = 8 * 1024 * 1024
     private val panorama = true
     private val audioEnabled = true
     private val livestreamSettings = LiveParamsBuilder()
@@ -148,17 +143,17 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 //-Connect Routes-
                 get("/command/connect") {
-                    connectCamera()
+                    InstaCameraManager.getInstance().openCamera(InstaCameraManager.CONNECT_TYPE_USB)
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/disconnect") {
-                    disconnectCamera()
+                    InstaCameraManager.getInstance().closeCamera()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 //-Capture Routes-
                 get("/command/capture") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
-                        captureImage()
+                        InstaCameraManager.getInstance().startNormalCapture(false)
                         call.respond(mapOf("msg" to "ok"))
                     } else {
                         call.respond(mapOf("err" to "camera not connected"))
@@ -166,7 +161,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/startRecord") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
-                        startRecord()
+                        InstaCameraManager.getInstance().startNormalRecord()
                         call.respond(mapOf("msg" to "ok"))
                     } else {
                         call.respond(mapOf("err" to "camera not connected"))
@@ -174,24 +169,15 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/stopRecord") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
-                        stopRecord()
+                        InstaCameraManager.getInstance().stopNormalRecord()
                         call.respond(mapOf("msg" to "ok"))
                     } else {
                         call.respond(mapOf("err" to "camera not connected"))
                     }
                 }
-//                get("/command/startLive") {
-//                    startPreviewLive()
-//                    call.respond(mapOf("msg" to "ok"))
-//                }
-//                get("/command/stopLive") {
-//                    stopLivestream()
-//                    call.respond(mapOf("msg" to "ok"))
-//                }
                 get("/command/startLive") {
-//                    stopPreview()
-//                    startPreviewLive()
-                    startLivestream()
+                    stopPreview()
+                    startPreviewLive()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/stopLive") {
@@ -200,6 +186,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/startPreviewNormal") {
+                    stopPreview()
                     startPreviewNormal()
                     call.respond(mapOf("msg" to "ok"))
                 }
@@ -345,44 +332,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     //ret
                     call.respond(response)
                 }
-                get("/status/khadas") {
-                    val request = call.request.queryParameters
-                    Log.w("request", request.toString())
-                    val response = HashMap<String, Any>()
-                    //mem
-                    response["freeSpace"] = totalMemory()
-                    response["totalSpace"] = totalMemory()
-                    if (request.contains("urlList")) response["urlList"] =
-                        InstaCameraManager.getInstance().allUrlList.toString()
-                    //ret
-                    call.respond(response)
-                }
             }
         }.start(wait = false)
     }
-
-
     //---API FUNCTIONS---
-    private fun connectCamera() {
-        InstaCameraManager.getInstance().openCamera(InstaCameraManager.CONNECT_TYPE_USB)
-    }
-
-    private fun disconnectCamera() {
-        InstaCameraManager.getInstance().closeCamera()
-    }
-
-    private fun captureImage() {
-        InstaCameraManager.getInstance().startNormalCapture(false)
-    }
-
-    private fun startRecord() {
-        InstaCameraManager.getInstance().startNormalRecord()
-    }
-
-    private fun stopRecord() {
-        InstaCameraManager.getInstance().stopNormalRecord()
-    }
-
     private fun startPreviewNormal() {
         previewMode = 0
         val list = InstaCameraManager.getInstance()
@@ -417,15 +370,12 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             InstaCameraManager.getInstance().startPreviewStream(previewSettings)
         }
     }
-
-    private fun stopLivestream() {
-        InstaCameraManager.getInstance().stopLive()
-    }
-
     private fun startLivestream() {
         InstaCameraManager.getInstance().startLive(livestreamSettings, this)
     }
-
+    private fun stopLivestream() {
+        InstaCameraManager.getInstance().stopLive()
+    }
     //---HELPERS---
     private fun createLiveParams(): CaptureParamsBuilder? {
         return CaptureParamsBuilder()
@@ -446,7 +396,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 previewResolution!!.fps
             )
     }
-
     private fun  createNormalParams(): CaptureParamsBuilder? {
         return  CaptureParamsBuilder()
             .setCameraType(InstaCameraManager.getInstance().cameraType)
@@ -460,13 +409,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             .setCameraRenderSurfaceInfo(mImageReader!!.surface, mImageReader!!.width, mImageReader!!.height);
             //TODO: (Experimental) hack android.view.surface (RenderSurface) to RTMP stream to custom server super fast
     }
-
-    private fun totalMemory(): Long { //TODO: NOT FINISHED, CHECKOUT https://stackoverflow.com/questions/7115016/how-to-find-the-amount-of-free-storage-disk-space-left-on-android
-        val statFs = StatFs(Environment.getRootDirectory().absolutePath)
-        return (statFs.blockCountLong * statFs.blockSizeLong)
-    }
-
-
     //---CALLBACKS---
     //-Preview callbacks-
     //Stream is loading
