@@ -1,4 +1,4 @@
-package com.example.kotlininsta360demo.activity
+package com.example.kotlininsta360demo.activity 
 //---IMPORTS---
 //-Android-
 import android.annotation.SuppressLint
