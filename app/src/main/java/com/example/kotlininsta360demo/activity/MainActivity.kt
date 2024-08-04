@@ -1,6 +1,6 @@
 package com.example.kotlininsta360demo.activity
-
-
+//---IMPORTS---
+//-Android-
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
@@ -49,9 +49,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.websocket.CloseReason
-import io.ktor.websocket.Frame
 import io.ktor.websocket.close
-import io.ktor.websocket.readText
 import io.ktor.websocket.send
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.time.Duration
@@ -60,12 +58,6 @@ import java.time.Duration
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
     IExportCallback, PlayerViewListener, ICameraOperateCallback {
     //---UI Components (assigned later)---
-    private var connectBtn: Button? = null
-    private var disconnectBtn: Button? = null
-    private var captureBtn: Button? = null
-    private var startPreviewBtn: Button? = null
-    private var stopPreviewBtn: Button? = null
-    private var livestreamStatusText: TextView? = null
     private var previewView: InstaCapturePlayerView? = null
 
     //---State---
@@ -101,7 +93,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-General State-
     var action = "Idle"
     var connections = 0
-
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,32 +103,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         InstaCameraSDK.init(this.application)
         InstaMediaSDK.init(this.application)
         //-Mobilize UI-
-        connectBtn = findViewById(R.id.btn_connect)
-        connectBtn?.setOnClickListener {
-            connectCamera()
-        }
-        disconnectBtn = findViewById(R.id.btn_disconnect)
-        disconnectBtn?.setOnClickListener {
-            disconnectCamera()
-        }
-        captureBtn = findViewById(R.id.btn_capture)
-        captureBtn?.setOnClickListener {
-            captureImage()
-        }
-        startPreviewBtn = findViewById(R.id.btn_start_preview)
-        startPreviewBtn?.setOnClickListener {
-            startPreviewLive()
-        }
-        stopPreviewBtn = findViewById(R.id.btn_stop_preview)
-        stopPreviewBtn?.setOnClickListener {
-            stopLivestream()
-            stopPreview()
-        }
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
-        livestreamStatusText = findViewById(R.id.tv_live_status)
-
-        //---WS STREAMER--
+        //---WS ROUTES--
         embeddedServer(Jetty, 8081) {
             install(WebSockets) {
                 pingPeriod = Duration.ofSeconds(15)
@@ -169,7 +137,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
             }
         }.start(wait = false)
-        //---API ROUTES---
+        //---REST API ROUTES---
         embeddedServer(Jetty, 8080) {
             install(ContentNegotiation) {
                 gson()
@@ -221,8 +189,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 //                    call.respond(mapOf("msg" to "ok"))
 //                }
                 get("/command/startLive") {
-                    stopPreview()
-                    startPreviewLive()
+//                    stopPreview()
+//                    startPreviewLive()
+                    startLivestream()
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/stopLive") {
@@ -363,7 +332,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(response)
                 }
                 //-Status Routes-
-                get("/status/camera") {
+                get("/status") {
                     val response = HashMap<String, Any>()
                     //connection
                     response["connected"] = InstaCameraManager.getInstance().cameraConnectedType == InstaCameraManager.CONNECT_TYPE_USB
@@ -499,15 +468,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
 
 
     //---CALLBACKS---
-    //-Main activity is no longer being viewed callback-
-    override fun onStop() {
-        super.onStop()
-        if (isFinishing) {
-            // Auto close preview since page loses focus
-            stopLivestream()
-            stopPreview()
-        }
-    }
     //-Preview callbacks-
     //Stream is loading
     private var mImageReader: ImageReader? = null
@@ -592,20 +552,20 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-Live Callbacks-
     @SuppressLint("SetTextI18n")
     override fun onLivePushError(error: Int, desc: String?) {
-        livestreamStatusText?.text = "Live Push Error: ($error) ($desc)"
+//        livestreamStatusText?.text = "Live Push Error: ($error) ($desc)"
     }
     @SuppressLint("SetTextI18n")
     override fun onLiveFpsUpdate(fps: Int) {
         livestreamFPS = fps
-        livestreamStatusText?.text = "FPS: $fps"
+//        livestreamStatusText?.text = "FPS: $fps"
     }
     @SuppressLint("SetTextI18n")
     override fun onLivePushStarted() {
-        livestreamStatusText?.text = "Live Push Started"
+//        livestreamStatusText?.text = "Live Push Started"
     }
     @SuppressLint("SetTextI18n")
     override fun onLivePushFinished() {
-        livestreamStatusText?.text = "Live Push Finished"
+//        livestreamStatusText?.text = "Live Push Finished"
     }
     //-Export callbacks-
     override fun onSuccess() {
@@ -633,5 +593,14 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
     override fun onCameraConnectError() {
         action = "Idle (delete cameraConnectError)"
+    }
+    //-Main activity is no longer being viewed callback-
+    override fun onStop() {
+        super.onStop()
+        if (isFinishing) {
+            // Auto close preview since page loses focus
+            stopLivestream()
+            stopPreview()
+        }
     }
 }
