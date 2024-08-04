@@ -1,6 +1,8 @@
-package com.example.kotlininsta360demo.activity 
+package com.example.kotlininsta360demo.activity
 //---IMPORTS---
 //-Android-
+//-Insta360-
+//-Server-
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
@@ -10,12 +12,11 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
-import android.os.StatFs
 import android.util.Log
-//-Insta360-
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
 import com.arashivision.sdkcamera.camera.callback.ICameraOperateCallback
+import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener
 import com.arashivision.sdkcamera.camera.callback.ILiveStatusListener
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener
 import com.arashivision.sdkcamera.camera.live.LiveParamsBuilder
@@ -32,27 +33,26 @@ import com.arashivision.sdkmedia.player.config.InstaStabType
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
 import com.arashivision.sdkmedia.work.WorkWrapper
 import com.example.kotlininsta360demo.ImageUtil
+import com.example.kotlininsta360demo.MyCaptureStatus
+import com.example.kotlininsta360demo.MyPreviewStatus
 import com.example.kotlininsta360demo.R
 import io.ktor.serialization.gson.gson
-//-Server-
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.jetty.Jetty
-import io.ktor.server.websocket.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.jetty.*
 import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.jetty.*
+import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.routing.routing
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.close
 import io.ktor.websocket.send
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.time.Duration
+
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
-    IExportCallback, PlayerViewListener, ICameraOperateCallback {
+    IExportCallback, PlayerViewListener, ICameraOperateCallback, ICaptureStatusListener {
     //---UI Components (assigned later)---
     private var previewView: InstaCapturePlayerView? = null
     //---State---
@@ -75,19 +75,19 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         .setBitrate(bitRate)
         .setPanorama(panorama)
     //-Export State-
+    private var exporting = false
     private var exportId = -1
     private var exportProgress = 0.0
-    private var exportWorkWrapper = WorkWrapper("")
     //-Export Config-
     private val exportDirPath =
         Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             .toString() + "/SDK_DEMO_EXPORT/"
     //-Preview State-
-    var previewMode = 0; //NORMAL: 0, VIDEO: 1, STREAM: 2
-    var previewImageStr: String = "";
+    private var previewImageStr: String = "";
     //-General State-
-    var action = "Idle"
     var connections = 0
+    private var captureStatus = MyCaptureStatus.IDLE // Idle | Capture | Record | Live
+    private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -152,47 +152,93 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 //-Capture Routes-
                 get("/command/capture") {
-                    if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus == MyPreviewStatus.LIVE) {
+                        call.respond(mapOf("err" to "camera is busy livestreaming to Youtube"))
+                    } else if (captureStatus == MyCaptureStatus.RECORD) {
+                        call.respond(mapOf("err" to "camera is busy recording"))
+                    } else if (captureStatus == MyCaptureStatus.CAPTURE) {
+                        call.respond(mapOf("err" to "camera is busy capturing"))
+                    } else {
+                        captureStatus = MyCaptureStatus.CAPTURE
+                        InstaCameraManager.getInstance().setCaptureStatusListener(this@MainActivity)
                         InstaCameraManager.getInstance().startNormalCapture(false)
                         call.respond(mapOf("msg" to "ok"))
-                    } else {
-                        call.respond(mapOf("err" to "camera not connected"))
                     }
                 }
                 get("/command/startRecord") {
-                    if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus == MyPreviewStatus.LIVE) {
+                        call.respond(mapOf("err" to "camera is busy streaming to Youtube"))
+                    } else if (captureStatus == MyCaptureStatus.RECORD) {
+                        call.respond(mapOf("err" to "camera is busy recording"))
+                    } else if (captureStatus == MyCaptureStatus.CAPTURE) {
+                        call.respond(mapOf("err" to "camera is busy capturing"))
+                    } else {
+                        captureStatus = MyCaptureStatus.RECORD
+                        InstaCameraManager.getInstance().setCaptureStatusListener(this@MainActivity)
                         InstaCameraManager.getInstance().startNormalRecord()
                         call.respond(mapOf("msg" to "ok"))
-                    } else {
-                        call.respond(mapOf("err" to "camera not connected"))
                     }
                 }
                 get("/command/stopRecord") {
-                    if (InstaCameraManager.getInstance().cameraConnectedType != -1) {
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (captureStatus != MyCaptureStatus.RECORD) {
+                        call.respond(mapOf("err" to "camera is not recording right now"))
+                    } else {
                         InstaCameraManager.getInstance().stopNormalRecord()
                         call.respond(mapOf("msg" to "ok"))
-                    } else {
-                        call.respond(mapOf("err" to "camera not connected"))
                     }
                 }
                 get("/command/startLive") {
-                    stopPreview()
-                    startPreviewLive()
-                    call.respond(mapOf("msg" to "ok"))
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus == MyPreviewStatus.NORMAL){
+                        call.respond(mapOf("err" to "camera is busy streaming for preview"))
+                    } else if (previewStatus == MyPreviewStatus.LIVE){
+                        call.respond(mapOf("err" to "camera is busy livestreaming to youtube"))
+                    } else {
+                        previewStatus = MyPreviewStatus.LIVE
+                        startPreviewLive()
+                        call.respond(mapOf("msg" to "ok"))
+                    }
                 }
                 get("/command/stopLive") {
-                    stopLivestream()
-                    stopPreview()
-                    call.respond(mapOf("msg" to "ok"))
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus != MyPreviewStatus.LIVE){
+                        call.respond(mapOf("err" to "camera is not livestreaming to youtube right now"))
+                    } else {
+                        stopLivestream()
+                        stopPreview()
+                        call.respond(mapOf("msg" to "ok"))
+                    }
                 }
                 get("/command/startPreviewNormal") {
-                    stopPreview()
-                    startPreviewNormal()
-                    call.respond(mapOf("msg" to "ok"))
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus == MyPreviewStatus.NORMAL){
+                        call.respond(mapOf("err" to "camera is busy livestreaming for preview"))
+                    } else if (previewStatus == MyPreviewStatus.LIVE){
+                        call.respond(mapOf("err" to "camera is busy livestreaming to youtube"))
+                    } else {
+                        previewStatus = MyPreviewStatus.NORMAL
+                        startPreviewNormal()
+                        call.respond(mapOf("msg" to "ok"))
+                    }
                 }
                 get("/command/stopPreviewNormal") {
-                    stopPreview()
-                    call.respond(mapOf("msg" to "ok"))
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus != MyPreviewStatus.NORMAL){
+                        call.respond(mapOf("err" to "camera is not livestreaming for preview right now"))
+                    } else {
+                        stopPreview()
+                        call.respond(mapOf("msg" to "ok"))
+                    }
                 }
                 get("/command/showPreview"){
                     val response = HashMap<String, Any>()
@@ -252,67 +298,87 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     // check camera
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
                         call.respond(mapOf("err" to "camera is not connected"))
+                    } else {
+                        // check url
+                        val workWrapper = WorkWrapper(url)
+                        if (workWrapper.height <= 10) {
+                            call.respond(mapOf("err" to "url does not exist"))
+                        }
+                        //delete file
+                        else {
+                            val fileUrls = listOf(*workWrapper.urlsForDelete)
+                            InstaCameraManager.getInstance()
+                                .deleteFileList(fileUrls, this@MainActivity)
+                            call.respond(mapOf("msg" to "ok"))
+                        }
                     }
-                    // check url
-                    val workWrapper = WorkWrapper(url)
-                    if (workWrapper.height <= 10) {
-                        call.respond(mapOf("err" to "url does not exist"))
-                    }
-                    //delete file
-                    val fileUrls = listOf(*workWrapper.urlsForDelete)
-                    InstaCameraManager.getInstance().deleteFileList(fileUrls, this@MainActivity)
-                    call.respond(mapOf("msg" to "ok"))
                 }
                 get("/export/image") {
-                    val request = call.request.queryParameters
-                    val response = HashMap<String, Any>()
-                    val url = request["url"]
-                    Log.w("url", url.toString())
-                    exportWorkWrapper = WorkWrapper(url)
-                    if (!exportWorkWrapper.isPhoto) {
-                        response["msg"] = "requested url is not a photo"
-                    } else {
-                        val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".jpg"
-                        val exportImageSettings = ExportImageParamsBuilder()
-                            .setExportMode(ExportUtils.ExportMode.PANORAMA)
-                            .setImageFusion(exportWorkWrapper.isPanoramaFile)
-                            .setTargetPath(exportDirPath + exportFileName)
-                        exportId = ExportUtils.exportImage(
-                            exportWorkWrapper,
-                            exportImageSettings,
-                            this@MainActivity
-                        )
-                        response["msg"] = "ok"
-                    }
-                    call.respond(response)
-                }
-                get("/export/video") {
+                    //get url
                     val request = call.request.queryParameters
                     val url = request["url"]
                     Log.w("url", url.toString())
-                    val workWrapper = WorkWrapper(url)
-                    if (!workWrapper.isVideo) {
-                        call.respond(mapOf("err" to "url is not a video"))
+                    // check camera
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (exporting) {
+                        call.respond(mapOf("err" to "camera is busy exporting"))
                     } else {
-//                        val exportVideoSettings =
-//                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + "/" + System.currentTimeMillis())
-//                                .setExportMode(ExportUtils.ExportMode.SPHERE).setWidth(16)
-//                                .setHeight(16).setBitrate(1 * 1024 * 1024).setFps(1)
-//                                .setDynamicStitch(false);
-                        val exportVideoSettings =
-                            ExportVideoParamsBuilder().setTargetPath(exportDirPath + System.currentTimeMillis() + ".mp4")
-                                .setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
-                        exportId =
-                            ExportUtils.exportVideo(
-                                workWrapper,
-                                exportVideoSettings,
+                        val exportWorkWrapper = WorkWrapper(url)
+                        if (!exportWorkWrapper.isPhoto) {
+                            call.respond(mapOf("err" to "requested file is not a photo"))
+                        } else if (exportWorkWrapper.height <= 10) {
+                            call.respond(mapOf("err" to "requested file does not exist"))
+                        }else {
+                            val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".jpg"
+                            val exportImageSettings = ExportImageParamsBuilder()
+                                .setExportMode(ExportUtils.ExportMode.PANORAMA)
+                                .setImageFusion(exportWorkWrapper.isPanoramaFile)
+                                .setTargetPath(exportDirPath + exportFileName)
+                            exportId = ExportUtils.exportImage(
+                                exportWorkWrapper,
+                                exportImageSettings,
                                 this@MainActivity
                             )
+                            call.respond(mapOf("msg" to "ok"))
+                        }
+                    }
+                }
+                get("/export/video") {
+                    //get url
+                    val request = call.request.queryParameters
+                    val url = request["url"]
+                    Log.w("url", url.toString())
+                    // check camera
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (exporting) {
+                        call.respond(mapOf("err" to "camera is busy exporting"))
+                    }else {
+                        val workWrapper = WorkWrapper(url)
+                        if (!workWrapper.isVideo) {
+                            call.respond(mapOf("err" to "requested file is not a video"))
+                        } else if (workWrapper.height <= 10) {
+                            call.respond(mapOf("err" to "requested file does not exist"))
+                        } else {
+                            val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".mp4"
+                            val exportVideoSettings =
+                                ExportVideoParamsBuilder().setTargetPath(exportDirPath + exportFileName)
+                                    .setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
+                            exportId =
+                                ExportUtils.exportVideo(
+                                    workWrapper,
+                                    exportVideoSettings,
+                                    this@MainActivity
+                                )
+                            call.respond(mapOf("msg" to "ok"))
+                        }
                     }
                 }
                 get("/export/status") {
                     val response = HashMap<String, Any>()
                     //export
+                    response["exporting"] = exporting
                     response["exportId"] = exportId
                     response["exportProgress"] = exportProgress
                     //ret
@@ -337,7 +403,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
     //---API FUNCTIONS---
     private fun startPreviewNormal() {
-        previewMode = 0
         val list = InstaCameraManager.getInstance()
             .getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_NORMAL)
         if (list.isNotEmpty()) {
@@ -357,7 +422,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView!!.destroy()
     }
     private fun startPreviewLive() {
-        previewMode = 2
         val list = InstaCameraManager.getInstance()
             .getSupportedPreviewStreamResolution(InstaCameraManager.PREVIEW_TYPE_LIVE)
         if (list.isNotEmpty()) {
@@ -411,11 +475,11 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     }
     //---CALLBACKS---
     //-Preview callbacks-
-    //Stream is loading
     private var mImageReader: ImageReader? = null
     private var mImageReaderHandlerThread: HandlerThread? = null
     private var mImageReaderHandler: Handler? = null
     private var imageCounter = 0;
+    //Preview stream is opening
     override fun onOpening() {
         createSurfaceView()
     }
@@ -458,13 +522,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             }
         }, mImageReaderHandler)
     }
-    //Stream started and playable
+    //Preview stream started and playable
     override fun onOpened() {
         InstaCameraManager.getInstance().setStreamEncode()
         previewView!!.setPlayerViewListener(object : PlayerViewListener {
             override fun onLoadingFinish() {
                 InstaCameraManager.getInstance().setPipeline(previewView!!.pipeline)
-                if (previewMode == 2) {
+                if (previewStatus == MyPreviewStatus.LIVE) {
                     startLivestream()
                 }
             }
@@ -472,10 +536,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 InstaCameraManager.getInstance().setPipeline(null)
             }
         })
-        if (previewMode == 0) {
+        if (previewStatus == MyPreviewStatus.NORMAL) {
             previewView!!.prepare(createNormalParams())
-        }
-        else if (previewMode == 2){
+        } else if (previewStatus == MyPreviewStatus.LIVE){
             previewView!!.prepare(createLiveParams())
         } else {
             previewView!!.prepare(createNormalParams())
@@ -483,58 +546,51 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         previewView!!.play()
         previewView!!.keepScreenOn = true
     }
-    //-Camera status changed callback-
-    override fun onCameraStatusChanged(enabled: Boolean) {
-        super.onCameraStatusChanged(enabled)
-        if (!enabled) {
-            stopLivestream()
-            stopPreview()
-        }
+    // Preview Stopped
+    override fun onIdle() {
+        previewStatus = MyPreviewStatus.IDLE
+    }
+    // Preview Failed
+    override fun onError() {
+        previewStatus = MyPreviewStatus.IDLE
     }
     //-Live Callbacks-
     @SuppressLint("SetTextI18n")
     override fun onLivePushError(error: Int, desc: String?) {
-//        livestreamStatusText?.text = "Live Push Error: ($error) ($desc)"
     }
     @SuppressLint("SetTextI18n")
     override fun onLiveFpsUpdate(fps: Int) {
         livestreamFPS = fps
-//        livestreamStatusText?.text = "FPS: $fps"
     }
     @SuppressLint("SetTextI18n")
     override fun onLivePushStarted() {
-//        livestreamStatusText?.text = "Live Push Started"
     }
     @SuppressLint("SetTextI18n")
     override fun onLivePushFinished() {
-//        livestreamStatusText?.text = "Live Push Finished"
     }
     //-Export callbacks-
     override fun onSuccess() {
-        Log.w("EXPORT CALLBACK", "ON SUCCESS")
-        action = "Idle (export success)"
+        exporting = false
     }
     override fun onFail(p0: Int, p1: String?) {
-        Log.w("EXPORT CALLBACK", "ON FAIL: $p0 | $p1")
-        action = "Idle (export fail) $p0 and $p1"
+        Log.w("MY ERROR", "EXPORT FAILED: $p0 | $p1")
+        exporting = false
     }
     override fun onCancel() {
-        action = "Idle (export cancel)"
+        exporting = false
     }
     override fun onProgress(progress: Float) {
-        Log.w("EXPORT CALLBACK", "ON PROGRESS: $progress")
         exportProgress = progress.toDouble()
     }
-
-    //-Delete callbacks-
+    //-Delete file callbacks-
     override fun onSuccessful() {
-        action = "Idle (delete success)"
+//        action = "Idle (delete success)"
     }
     override fun onFailed() {
-        action = "Idle (delete failed)"
+//        action = "Idle (delete failed)"
     }
     override fun onCameraConnectError() {
-        action = "Idle (delete cameraConnectError)"
+//        action = "Idle (delete cameraConnectError)"
     }
     //-Main activity is no longer being viewed callback-
     override fun onStop() {
@@ -544,5 +600,31 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             stopLivestream()
             stopPreview()
         }
+    }
+    //-Camera status changed callback-
+    //Camera disconnected
+    override fun onCameraStatusChanged(enabled: Boolean) {
+        super.onCameraStatusChanged(enabled)
+        if (!enabled) {
+            stopLivestream()
+            stopPreview()
+        }
+    }
+    //-Capturing callbacks
+    override fun onCaptureStarting() {}
+    override fun onCaptureWorking() {}
+    override fun onCaptureStopping() {}
+    override fun onCaptureFinish(filePaths: Array<String?>?) {
+        // If you use sdk api to capture, the filePaths could be callback
+        // Otherwise, filePaths will be null
+        captureStatus = MyCaptureStatus.IDLE
+    }
+    override fun onCaptureCountChanged(captureCount: Int) {
+        // Interval shots
+        // Only Interval Capture type will callback this
+    }
+    override fun onCaptureTimeChanged(captureTime: Long) {
+        // Record Duration, in ms
+        // Only Record type will callback this
     }
 }
