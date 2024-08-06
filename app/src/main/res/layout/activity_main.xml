@@ -4,96 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".activity.MainActivity">
-    <LinearLayout
-        android:layout_width="match_parent"
+    <com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
+        android:id="@+id/player_capture"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center">
-
-        <TextView
-            android:id="@+id/tv_cam_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:autoSizeTextType="uniform"
-            android:maxLines="1"/>
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
+        android:background="@android:color/darker_gray" />
+    <TextView
+        android:id="@+id/text_view_id"
         android:layout_height="wrap_content"
-        android:gravity="center">
-
-        <Button
-            android:id="@+id/btn_connect"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Connect"
-            android:textSize="25sp"
-             />
-        <Button
-            android:id="@+id/btn_disconnect"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Disconnect"
-            android:textSize="25sp"
-             />
-        <Button
-            android:id="@+id/btn_capture"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Capture"
-            android:textSize="25sp"
-             />
-
-    </LinearLayout>
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center">
-        <Button
-            android:id="@+id/btn_start_preview"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Start Preview"
-            android:textSize="25sp"
-            />
-        <Button
-            android:id="@+id/btn_stop_preview"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Stop Preview"
-            android:textSize="25sp"
-            />
-        <Button
-            android:id="@+id/btn_start_livestream"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Start Livestream"
-            android:textSize="25sp"
-            />
-        <Button
-            android:id="@+id/btn_stop_livestream"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Stop Livestream"
-            android:textSize="25sp"
-            />
-        <com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
-            android:id="@+id/player_capture"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@android:color/darker_gray" />
-        <com.arashivision.sdkmedia.player.image.InstaImagePlayerView
-            android:id="@+id/player_image"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@android:color/darker_gray" />
-        <TextView
-            android:id="@+id/tv_live_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="No live status received"
-            android:textSize="25sp"/>
-    </LinearLayout>
+        android:layout_width="wrap_content"
+        android:text="You have successfully installed the Under360 Server!" />
 </LinearLayout>
