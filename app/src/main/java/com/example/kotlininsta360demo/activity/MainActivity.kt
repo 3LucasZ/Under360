@@ -37,6 +37,7 @@ import com.example.kotlininsta360demo.MyCaptureStatus
 import com.example.kotlininsta360demo.MyPreviewStatus
 import com.example.kotlininsta360demo.R
 import io.ktor.http.HttpStatusCode
+import io.ktor.network.sockets.connect
 import io.ktor.serialization.gson.gson
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -46,6 +47,7 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import io.ktor.util.date.getTimeMillis
 import io.ktor.websocket.CloseReason
 import io.ktor.websocket.close
 import io.ktor.websocket.send
@@ -86,7 +88,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-Preview State-
     private var previewImageStr: String = "";
     //-General State-
-    var connections = 0
+    var connectionIds = mutableListOf<Long>()
     private var captureStatus = MyCaptureStatus.IDLE // Idle | Capture | Record | Live
     private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
     //---Initialize (run on app load)---
@@ -105,30 +107,30 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         embeddedServer(Jetty, 8081) {
             install(WebSockets) {
                 pingPeriod = Duration.ofSeconds(15)
-                timeout = Duration.ofSeconds(10000000000)
+                timeout = Duration.ofSeconds(15)
                 maxFrameSize = Long.MAX_VALUE
                 masking = false
             }
             routing {
                 webSocket("/stream") {
-                    if (connections >= 1) {
-                        close(CloseReason(CloseReason.Codes.NORMAL, "Too many clients!!"))
-                    } else {
-                        connections += 1
-                        Log.w("websocket","websocket connected")
-                        try {
-                            while (true) {
-                                Thread.sleep(200)
-                                send(previewImageStr)
+                    val id = getTimeMillis()
+                    connectionIds.add(id)
+                    Log.w("websocket","websocket connected")
+                    try {
+                        while (true) {
+                            Thread.sleep(200)
+                            send(previewImageStr)
+                            if (connectionIds.size > 1 && id < connectionIds.max()) {
+                                close(CloseReason(CloseReason.Codes.NORMAL, "Too many clients!!"))
                             }
-                        }catch (e: ClosedReceiveChannelException) {
-                            println("onClose ${closeReason.await()}")
-                            connections -= 1
-                        } catch (e: Throwable) {
-                            println("onError ${closeReason.await()}")
-                            connections -= 1
-                            e.printStackTrace()
                         }
+                    }catch (e: ClosedReceiveChannelException) {
+                        println("onClose ${closeReason.await()}")
+                        connectionIds.remove(id)
+                    } catch (e: Throwable) {
+                        println("onError ${closeReason.await()}")
+                        connectionIds.remove(id)
+                        e.printStackTrace()
                     }
                 }
             }
@@ -429,6 +431,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val response = HashMap<String, Any>()
                     response["captureStatus"] = captureStatus
                     response["previewStatus"] = previewStatus
+                    response["wsStreamConnections"] = connectionIds.size
                     //ret
                     call.respond(response)
                 }
