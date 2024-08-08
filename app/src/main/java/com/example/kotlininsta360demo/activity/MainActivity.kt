@@ -427,6 +427,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     //ret
                     call.respond(response)
                 }
+                get("/status/poll") {
+                    val response = HashMap<String, Any>()
+                    //connection
+                    response["connected"] = InstaCameraManager.getInstance().cameraConnectedType == InstaCameraManager.CONNECT_TYPE_USB
+                    //ret
+                    call.respond(response)
+                }
                 get("/status/operation") {
                     val response = HashMap<String, Any>()
                     response["captureStatus"] = captureStatus
