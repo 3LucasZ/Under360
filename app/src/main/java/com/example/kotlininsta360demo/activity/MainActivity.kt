@@ -365,6 +365,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "requested file does not exist"))
                         }else {
+                            exporting = true
+                            exportProgress = 0.0
                             val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".jpg"
                             val exportImageSettings = ExportImageParamsBuilder()
                                 .setExportMode(ExportUtils.ExportMode.PANORAMA)
@@ -400,10 +402,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             call.response.status(HttpStatusCode.InternalServerError)
                             call.respond(mapOf("err" to "requested file does not exist"))
                         } else {
+                            exporting = true
+                            exportProgress = 0.0
                             val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".mp4"
-                            val exportVideoSettings =
-                                ExportVideoParamsBuilder().setTargetPath(exportDirPath + exportFileName)
-                                    .setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
+                            val exportVideoSettings = ExportVideoParamsBuilder()
+                                .setExportMode(ExportUtils.ExportMode.PANORAMA)
+                                .setTargetPath(exportDirPath + exportFileName)
+//                                    .setBitrate(8 * 1024 * 1024).setFps(10).setWidth(512).setHeight(512)
                             exportId =
                                 ExportUtils.exportVideo(
                                     workWrapper,
@@ -447,7 +452,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val response = HashMap<String, Any>()
                     //export
                     response["exporting"] = exporting
-                    response["exportId"] = exportId
+//                    response["exportId"] = exportId
                     response["exportProgress"] = exportProgress
                     //ret
                     call.respond(response)
