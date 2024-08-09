@@ -259,8 +259,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not livestreaming for preview right now"))
                     } else {
-                        stopPreview()
+                        call.response.status(HttpStatusCode.OK)
                         call.respond(mapOf("msg" to "ok"))
+                        stopPreview()
                     }
                 }
                 get("/command/showPreview"){
