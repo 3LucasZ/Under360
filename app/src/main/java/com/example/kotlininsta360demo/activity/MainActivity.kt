@@ -37,7 +37,6 @@ import com.example.kotlininsta360demo.MyCaptureStatus
 import com.example.kotlininsta360demo.MyPreviewStatus
 import com.example.kotlininsta360demo.R
 import io.ktor.http.HttpStatusCode
-import io.ktor.network.sockets.connect
 import io.ktor.serialization.gson.gson
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -269,6 +268,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["data"] = previewImageStr;
                     call.respond(response)
                 }
+                //-Settings Routes-
+//                get("/set/wb"){
+//                    InstaCameraManager.getInstance().setWhiteBalance(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM, InstaCameraManager.WHITE_);
+//                }
                 //-Export Routes-
                 get("/ls"){
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
@@ -431,6 +434,18 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["freeSpace"] = InstaCameraManager.getInstance().cameraStorageFreeSpace
                     response["totalSpace"] = InstaCameraManager.getInstance().cameraStorageTotalSpace
                     //ret
+                    call.respond(response)
+                }
+                get("/status/settings") {
+                    val response = HashMap<String, Any>()
+                    response["whiteBalance"] = InstaCameraManager.getInstance().getWhiteBalance(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["whiteBalanceValue"] = InstaCameraManager.getInstance().getWhiteBalanceValue(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["ISO"] = InstaCameraManager.getInstance().getISO(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    InstaCameraManager.WHITE_BALANCE_AUTO
                     call.respond(response)
                 }
                 get("/status/poll") {
