@@ -97,6 +97,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         //-Initialize Camera SDK-
         InstaCameraSDK.init(this.application)
         InstaMediaSDK.init(this.application)
+        InstaCameraManager.getInstance().openCamera(CONNECT_TYPE_USB)
         //-Mobilize UI-
         previewView = findViewById(R.id.player_capture)
         previewView!!.setLifecycle(lifecycle)
