@@ -165,34 +165,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/get/all") {
                     val response = HashMap<String, Any>()
-                    response["whiteBalance"] = InstaCameraManager.getInstance().getWhiteBalance(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["whiteBalanceValue"] = InstaCameraManager.getInstance().getWhiteBalanceValue(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["ISO"] = InstaCameraManager.getInstance().getISO(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["ISOTopLimit"] = InstaCameraManager.getInstance().getISOTopLimit(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )
-                    response["captureResolution"] = InstaCameraManager.getInstance().getResolutionFromCamera(
-                        FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["recordResolution"] = InstaCameraManager.getInstance().getResolutionFromCamera(
-                        FUNCTION_MODE_RECORD_NORMAL)
+                    response["whiteBalance"] = InstaCameraManager.getInstance().getWhiteBalance(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["whiteBalanceValue"] = InstaCameraManager.getInstance().getWhiteBalanceValue(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["ISO"] = InstaCameraManager.getInstance().getISO(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["ISOTopLimit"] = InstaCameraManager.getInstance().getISOTopLimit(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["captureResolution"] = InstaCameraManager.getInstance().getResolutionFromCamera(FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["recordResolution"] = InstaCameraManager.getInstance().getResolutionFromCamera(FUNCTION_MODE_RECORD_NORMAL)
 //                    response["batteryType"] = InstaCameraManager.getInstance().
 //                    response["photoResolution"] = InstaCameraManager.getInstance().getPhotoResolutionFromCamera(
 //                        FUNCTION_MODE_CAPTURE_NORMAL)
