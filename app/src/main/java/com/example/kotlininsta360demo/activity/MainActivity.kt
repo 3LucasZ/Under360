@@ -151,6 +151,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(mapOf("msg" to "ok"))
                 }
                 //-Settings Routes-
+                get("/get/metadata") {
+                    val response = HashMap<String, Any>()
+                    response["cameraType"] = InstaCameraManager.getInstance().cameraType
+                    response["cameraVersion"] = InstaCameraManager.getInstance().cameraVersion
+                    response["cameraSerial"] = InstaCameraManager.getInstance().cameraSerial
+                    call.respond(response)
+                }
                 get("/get/whiteBalance") {
                     call.respond(mapOf("whiteBalance" to InstaCameraManager.getInstance().getWhiteBalance(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)))
                 }
