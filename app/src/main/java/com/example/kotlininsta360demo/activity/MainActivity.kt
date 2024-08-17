@@ -88,7 +88,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var previewImageStr: String = "";
     //-General State-
     var connectionIds = mutableListOf<Long>()
-    private var captureStatus = MyCaptureStatus.IDLE // Idle | Capture | Record | Live
     private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
@@ -160,14 +159,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     } else if (previewStatus == MyPreviewStatus.LIVE) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy livestreaming to Youtube"))
-                    } else if (captureStatus == MyCaptureStatus.RECORD) {
+                    } else if (InstaCameraManager.getInstance().currentCaptureType != InstaCameraManager.CAPTURE_TYPE_IDLE) {
                         call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy recording"))
-                    } else if (captureStatus == MyCaptureStatus.CAPTURE) {
-                        call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy capturing"))
+                        call.respond(mapOf("err" to "camera is busy with ${InstaCameraManager.getInstance().currentCaptureType}"))
                     } else {
-                        captureStatus = MyCaptureStatus.CAPTURE
                         InstaCameraManager.getInstance().setCaptureStatusListener(this@MainActivity)
                         InstaCameraManager.getInstance().startNormalCapture(false)
                         call.respond(mapOf("msg" to "ok"))
@@ -177,17 +172,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
-                    } else if (previewStatus == MyPreviewStatus.LIVE) {
+                    } else if (previewStatus != MyPreviewStatus.IDLE) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy streaming to Youtube"))
-                    } else if (captureStatus == MyCaptureStatus.RECORD) {
+                    } else if (InstaCameraManager.getInstance().currentCaptureType != InstaCameraManager.CAPTURE_TYPE_IDLE) {
                         call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy recording"))
-                    } else if (captureStatus == MyCaptureStatus.CAPTURE) {
-                        call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy capturing"))
+                        call.respond(mapOf("err" to "camera is busy with capture type ${InstaCameraManager.getInstance().currentCaptureType}"))
                     } else {
-                        captureStatus = MyCaptureStatus.RECORD
                         InstaCameraManager.getInstance().setCaptureStatusListener(this@MainActivity)
                         InstaCameraManager.getInstance().startNormalRecord()
                         call.respond(mapOf("msg" to "ok"))
@@ -197,7 +188,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
-                    } else if (captureStatus != MyCaptureStatus.RECORD) {
+                    } else if (InstaCameraManager.getInstance().currentCaptureType != InstaCameraManager.CAPTURE_TYPE_NORMAL_RECORD) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not recording right now"))
                     } else {
@@ -209,13 +200,10 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
-                    } else if (previewStatus == MyPreviewStatus.NORMAL){
+                    } else if (previewStatus != MyPreviewStatus.IDLE){
                         call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy streaming for preview"))
-                    } else if (previewStatus == MyPreviewStatus.LIVE){
-                        call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy livestreaming to youtube"))
-                    } else {
+                        call.respond(mapOf("err" to "camera is busy with preview type $previewStatus"))
+                    }  else {
                         previewStatus = MyPreviewStatus.LIVE
                         startPreviewLive()
                         call.respond(mapOf("msg" to "ok"))
@@ -238,12 +226,9 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
-                    } else if (previewStatus == MyPreviewStatus.NORMAL){
+                    } else if (previewStatus != MyPreviewStatus.IDLE){
                         call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy livestreaming for preview"))
-                    } else if (previewStatus == MyPreviewStatus.LIVE){
-                        call.response.status(HttpStatusCode.InternalServerError)
-                        call.respond(mapOf("err" to "camera is busy livestreaming to youtube"))
+                        call.respond(mapOf("err" to "camera is busy with preview type $previewStatus"))
                     } else {
                         previewStatus = MyPreviewStatus.NORMAL
                         startPreviewNormal()
@@ -445,7 +430,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
                     response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
                     response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    InstaCameraManager.WHITE_BALANCE_AUTO
                     call.respond(response)
                 }
                 get("/status/poll") {
@@ -457,7 +441,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/status/operation") {
                     val response = HashMap<String, Any>()
-                    response["captureStatus"] = captureStatus
+                    response["captureStatus"] = InstaCameraManager.getInstance().currentCaptureType
                     response["previewStatus"] = previewStatus
                     response["wsStreamConnections"] = connectionIds.size
                     //ret
@@ -691,7 +675,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     override fun onCaptureFinish(filePaths: Array<String?>?) {
         // If you use sdk api to capture, the filePaths could be callback
         // Otherwise, filePaths will be null
-        captureStatus = MyCaptureStatus.IDLE
     }
     override fun onCaptureCountChanged(captureCount: Int) {
         // Interval shots
