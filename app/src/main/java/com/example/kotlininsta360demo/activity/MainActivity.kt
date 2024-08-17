@@ -81,14 +81,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     private var exportId = -1
     private var exportProgress = 0.0
     //-Export Config-
-    private val exportDirPath =
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-            .toString() + "/SDK_DEMO_EXPORT/"
+    private val exportDirPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + "/SDK_DEMO_EXPORT/"
     //-Preview State-
     private var previewImageStr: String = "";
     //-General State-
     var connectionIds = mutableListOf<Long>()
     private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
+    private val functionModes = intArrayOf(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL, InstaCameraManager.FUNCTION_MODE_RECORD_NORMAL, InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -149,6 +148,14 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/disconnect") {
                     InstaCameraManager.getInstance().closeCamera()
+                    call.respond(mapOf("msg" to "ok"))
+                }
+                //-Settings Routes-
+                get("/get/whiteBalance") {
+                    call.respond(mapOf("whiteBalance" to InstaCameraManager.getInstance().getWhiteBalance(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)))
+                }
+                get("/set/whiteBalance") {
+                    for (mode in functionModes) InstaCameraManager.getInstance().setWhiteBalance(mode, call.request.queryParameters["whiteBalance"]!!.toInt())
                     call.respond(mapOf("msg" to "ok"))
                 }
                 //-Capture Routes-
@@ -255,10 +262,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["data"] = previewImageStr;
                     call.respond(response)
                 }
-                //-Settings Routes-
-//                get("/set/wb"){
-//                    InstaCameraManager.getInstance().setWhiteBalance(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM, InstaCameraManager.WHITE_);
-//                }
                 //-Export Routes-
                 get("/ls"){
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
@@ -425,13 +428,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/status/settings") {
                     val response = HashMap<String, Any>()
-                    response["whiteBalance"] = InstaCameraManager.getInstance().getWhiteBalance(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["whiteBalanceValue"] = InstaCameraManager.getInstance().getWhiteBalanceValue(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["ISO"] = InstaCameraManager.getInstance().getISO(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL)
+                    response["whiteBalance"] = InstaCameraManager.getInstance().getWhiteBalance(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
+                    response["whiteBalanceValue"] = InstaCameraManager.getInstance().getWhiteBalanceValue(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
+                    response["ISO"] = InstaCameraManager.getInstance().getISO(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
+                    response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
+                    response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
+                    response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
+                    response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM)
                     call.respond(response)
                 }
                 get("/status/poll") {
