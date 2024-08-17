@@ -172,7 +172,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not connected"))
-                    } else if (previewStatus != MyPreviewStatus.IDLE) {
+                    } else if (previewStatus == MyPreviewStatus.LIVE) {
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is busy streaming to Youtube"))
                     } else if (InstaCameraManager.getInstance().currentCaptureType != InstaCameraManager.CAPTURE_TYPE_IDLE) {
@@ -192,6 +192,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not recording right now"))
                     } else {
+                        call.response.status(HttpStatusCode.OK)
                         InstaCameraManager.getInstance().stopNormalRecord()
                         call.respond(mapOf("msg" to "ok"))
                     }
@@ -217,6 +218,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         call.response.status(HttpStatusCode.InternalServerError)
                         call.respond(mapOf("err" to "camera is not livestreaming to youtube right now"))
                     } else {
+                        call.response.status(HttpStatusCode.OK)
                         stopLivestream()
                         stopPreview()
                         call.respond(mapOf("msg" to "ok"))
