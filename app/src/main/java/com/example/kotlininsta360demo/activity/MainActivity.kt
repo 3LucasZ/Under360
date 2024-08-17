@@ -151,6 +151,11 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     InstaCameraManager.getInstance().openCamera(CONNECT_TYPE_USB)
                     call.respond(mapOf("msg" to "ok"))
                 }
+                get("/command/init"){
+                    for (mode in functionModes) InstaCameraManager.getInstance().setISOTopLimit(mode, 3200)
+                    for (mode in functionModes) InstaCameraManager.getInstance().setExposureMode(mode, InstaCameraManager.EXPOSURE_MODE_MANUAL)
+                    call.respond(mapOf("msg" to "ok"))
+                }
                 get("/command/disconnect") {
                     InstaCameraManager.getInstance().closeCamera()
                     call.respond(mapOf("msg" to "ok"))
