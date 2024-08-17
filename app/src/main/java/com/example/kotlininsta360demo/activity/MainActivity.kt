@@ -172,6 +172,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     val response = HashMap<String, Any>()
                     response["whiteBalance"] = InstaCameraManager.getInstance().getWhiteBalance(FUNCTION_MODE_PREVIEW_STREAM)
                     response["whiteBalanceValue"] = InstaCameraManager.getInstance().getWhiteBalanceValue(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(FUNCTION_MODE_PREVIEW_STREAM)
                     response["ISO"] = InstaCameraManager.getInstance().getISO(FUNCTION_MODE_PREVIEW_STREAM)
                     response["ISOTopLimit"] = InstaCameraManager.getInstance().getISOTopLimit(FUNCTION_MODE_PREVIEW_STREAM)
                     response["exposureMode"] = InstaCameraManager.getInstance().getExposureMode(FUNCTION_MODE_PREVIEW_STREAM)
@@ -186,18 +188,14 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     call.respond(response)
                 }
                 get("/get/whiteBalance") {
-                    call.respond(mapOf("whiteBalance" to InstaCameraManager.getInstance().getWhiteBalance(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )))
+                    call.respond(mapOf("whiteBalance" to InstaCameraManager.getInstance().getWhiteBalance(FUNCTION_MODE_PREVIEW_STREAM)))
                 }
                 get("/set/whiteBalance") {
                     for (mode in functionModes) InstaCameraManager.getInstance().setWhiteBalance(mode, call.request.queryParameters["whiteBalance"]!!.toInt())
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/get/ISO") {
-                    call.respond(mapOf("ISO" to InstaCameraManager.getInstance().getISO(
-                        FUNCTION_MODE_PREVIEW_STREAM
-                    )))
+                    call.respond(mapOf("ISO" to InstaCameraManager.getInstance().getISO(FUNCTION_MODE_PREVIEW_STREAM)))
                 }
                 get("/set/ISO") {
                     for (mode in functionModes) InstaCameraManager.getInstance().setISO(mode, call.request.queryParameters["ISO"]!!.toInt())
