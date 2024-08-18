@@ -45,6 +45,7 @@ import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
+import com.arashivision.sdkmedia.stitch.StitchUtils
 import com.arashivision.sdkmedia.work.WorkWrapper
 import com.example.kotlininsta360demo.ImageUtil
 import com.example.kotlininsta360demo.MyCaptureStatus
@@ -101,7 +102,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-General State-
     var connectionIds = mutableListOf<Long>()
     private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
-    private val functionModes = intArrayOf(FUNCTION_MODE_CAPTURE_NORMAL, FUNCTION_MODE_RECORD_NORMAL, FUNCTION_MODE_PREVIEW_STREAM)
+    private val functionModes = intArrayOf(FUNCTION_MODE_CAPTURE_NORMAL, FUNCTION_MODE_HDR_CAPTURE, FUNCTION_MODE_RECORD_NORMAL, FUNCTION_MODE_PREVIEW_STREAM)
     private val resolutions = arrayOf(PreviewStreamResolution.STREAM_1280_720_30FPS, PreviewStreamResolution.STREAM_1920_1080_30FPS, PreviewStreamResolution.STREAM_3840_2160_30FPS)
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
@@ -221,6 +222,22 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     } else {
                         InstaCameraManager.getInstance().setCaptureStatusListener(this@MainActivity)
                         InstaCameraManager.getInstance().startNormalCapture(false)
+                        call.respond(mapOf("msg" to "ok"))
+                    }
+                }
+                get("/command/capture_HDR") {
+                    if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respond(mapOf("err" to "camera is not connected"))
+                    } else if (previewStatus == MyPreviewStatus.LIVE) {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respond(mapOf("err" to "camera is busy livestreaming to Youtube"))
+                    } else if (InstaCameraManager.getInstance().currentCaptureType != InstaCameraManager.CAPTURE_TYPE_IDLE) {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respond(mapOf("err" to "camera is busy with ${InstaCameraManager.getInstance().currentCaptureType}"))
+                    } else {
+                        InstaCameraManager.getInstance().setCaptureStatusListener(this@MainActivity)
+                        InstaCameraManager.getInstance().startHDRCapture(false)
                         call.respond(mapOf("msg" to "ok"))
                     }
                 }
@@ -411,8 +428,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             exportProgress = 0.0
                             val exportFileName = url?.substring(url.lastIndexOf("/")+1,url.lastIndexOf(".")) + ".jpg"
                             val exportImageSettings = ExportImageParamsBuilder()
-                                .setExportMode(ExportUtils.ExportMode.PANORAMA)
-                                .setImageFusion(exportWorkWrapper.isPanoramaFile)
                                 .setTargetPath(exportDirPath + exportFileName)
                             exportId = ExportUtils.exportImage(
                                 exportWorkWrapper,
