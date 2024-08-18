@@ -217,6 +217,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     for (mode in functionModes) InstaCameraManager.getInstance().setExposureEV(mode, call.request.queryParameters["exposureEV"]!!.toFloat())
                     call.respond(mapOf("msg" to "ok"))
                 }
+                get("/get/shutterMode") {
+                    call.respond(mapOf("shutterMode" to InstaCameraManager.getInstance().getShutterMode(FUNCTION_MODE_PREVIEW_STREAM)))
+                }
+                get("/set/shutterMode") {
+                    for (mode in functionModes) InstaCameraManager.getInstance().setShutterMode(mode, call.request.queryParameters["shutterMode"]!!.toInt())
+                    call.respond(mapOf("msg" to "ok"))
+                }
                 //-Capture Routes-
                 get("/command/capture") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
