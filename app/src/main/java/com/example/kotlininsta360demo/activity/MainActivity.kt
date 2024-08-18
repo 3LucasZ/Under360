@@ -638,7 +638,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
             .setCameraSelfie(InstaCameraManager.getInstance().isCameraSelfie)
             .setLive(false)
             .setStabType(InstaStabType.STAB_TYPE_AUTO)
-            .setResolutionParams(1024, 512, 10)
+            .setResolutionParams(1920, 960, 6)
             //hack
             .setRenderModelType(CaptureParamsBuilder.RENDER_MODE_PLANE_STITCH).setScreenRatio(2, 1)
             .setCameraRenderSurfaceInfo(mImageReader!!.surface, mImageReader!!.width, mImageReader!!.height);
@@ -661,7 +661,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
         mImageReaderHandlerThread = HandlerThread("camera render surface")
         mImageReaderHandlerThread!!.start()
         mImageReaderHandler = Handler(mImageReaderHandlerThread!!.looper)
-        mImageReader = ImageReader.newInstance(1024, 512, PixelFormat.RGBA_8888, 2)
+        mImageReader = ImageReader.newInstance(1920, 960, PixelFormat.RGBA_8888, 2)
         mImageReader!!.setOnImageAvailableListener({ reader ->
             try {
                 if (reader.maxImages > 0) {
