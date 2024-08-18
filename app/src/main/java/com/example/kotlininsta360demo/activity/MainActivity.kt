@@ -36,11 +36,13 @@ import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
+import com.arashivision.sdkmedia.stitch.StitchUtils
 import com.arashivision.sdkmedia.work.WorkUtils
 import com.arashivision.sdkmedia.work.WorkWrapper
 import com.example.kotlininsta360demo.ImageUtil
 import com.example.kotlininsta360demo.MyPreviewStatus
 import com.example.kotlininsta360demo.R
+import com.example.kotlininsta360demo.getFileName
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.gson.gson
 import io.ktor.server.application.*
@@ -406,6 +408,23 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                             InstaCameraManager.getInstance()
                                 .deleteFileList(fileUrls, this@MainActivity)
                             call.respond(mapOf("msg" to "ok"))
+                        }
+                    }
+                }
+                get("/export/hdr"){
+                    val urls = call.request.queryParameters["urls"]?.split(",")?.toTypedArray()
+                    println(urls.contentToString())
+                    if (urls!!.size < 1) {
+                        call.response.status(HttpStatusCode.InternalServerError)
+                        call.respond(mapOf("err" to "not enough urls given"))
+                    } else {
+                        val workWrapper = WorkWrapper(urls)
+                        val isSuccessful = StitchUtils.generateHDR(workWrapper, exportDirPath + "HDR" + getFileName(urls[0]));
+                        if (isSuccessful) {
+                            call.respond(mapOf("msg" to "ok"))
+                        } else {
+                            call.response.status(HttpStatusCode.InternalServerError)
+                            call.respond(mapOf("err" to "not successful"))
                         }
                     }
                 }
