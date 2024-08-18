@@ -3,6 +3,7 @@ package com.example.kotlininsta360demo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
+import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution
 import java.io.ByteArrayOutputStream
 
 

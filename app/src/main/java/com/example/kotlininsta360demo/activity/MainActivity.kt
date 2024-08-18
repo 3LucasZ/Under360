@@ -13,18 +13,28 @@ import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
+import com.arashivision.camera.InstaCameraConstants
+import com.arashivision.camera.InstaCameraController
+import com.arashivision.camera.InstaCameraState
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
+import com.arashivision.sdkcamera.camera.InstaCameraManager.CAPTURE_TYPE_NORMAL_RECORD
 import com.arashivision.sdkcamera.camera.InstaCameraManager.CONNECT_TYPE_USB
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL
+import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL_PANO
+import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_HDR_CAPTURE
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_RECORD_NORMAL
+import com.arashivision.sdkcamera.camera.InstaCameraManager.PREVIEW_TYPE_LIVE
+import com.arashivision.sdkcamera.camera.InstaCameraManager.PREVIEW_TYPE_NORMAL
+import com.arashivision.sdkcamera.camera.InstaCameraManager.PREVIEW_TYPE_RECORD
 import com.arashivision.sdkcamera.camera.callback.ICameraOperateCallback
 import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener
 import com.arashivision.sdkcamera.camera.callback.ILiveStatusListener
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener
 import com.arashivision.sdkcamera.camera.live.LiveParamsBuilder
 import com.arashivision.sdkcamera.camera.preview.PreviewParamsBuilder
+import com.arashivision.sdkcamera.camera.resolution.PhotoResolution
 import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution
 import com.arashivision.sdkmedia.InstaMediaSDK
 import com.arashivision.sdkmedia.export.ExportImageParamsBuilder
@@ -92,6 +102,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     var connectionIds = mutableListOf<Long>()
     private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
     private val functionModes = intArrayOf(FUNCTION_MODE_CAPTURE_NORMAL, FUNCTION_MODE_RECORD_NORMAL, FUNCTION_MODE_PREVIEW_STREAM)
+    private val resolutions = arrayOf(PreviewStreamResolution.STREAM_1280_720_30FPS, PreviewStreamResolution.STREAM_1920_1080_30FPS, PreviewStreamResolution.STREAM_3840_2160_30FPS)
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -180,11 +191,6 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(FUNCTION_MODE_PREVIEW_STREAM)
                     response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(FUNCTION_MODE_PREVIEW_STREAM)
                     response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(FUNCTION_MODE_PREVIEW_STREAM)
-                    response["captureResolution"] = InstaCameraManager.getInstance().getResolutionFromCamera(FUNCTION_MODE_CAPTURE_NORMAL)
-                    response["recordResolution"] = InstaCameraManager.getInstance().getResolutionFromCamera(FUNCTION_MODE_RECORD_NORMAL)
-//                    response["batteryType"] = InstaCameraManager.getInstance().
-//                    response["photoResolution"] = InstaCameraManager.getInstance().getPhotoResolutionFromCamera(
-//                        FUNCTION_MODE_CAPTURE_NORMAL)
                     call.respond(response)
                 }
                 get("/get/whiteBalance") {
