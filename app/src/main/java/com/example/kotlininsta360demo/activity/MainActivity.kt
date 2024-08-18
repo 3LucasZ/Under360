@@ -95,7 +95,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
     //-General State-
     var connectionIds = mutableListOf<Long>()
     private var previewStatus = MyPreviewStatus.IDLE // Idle | Normal | Live
-    private val functionModes = intArrayOf(FUNCTION_MODE_CAPTURE_NORMAL, FUNCTION_MODE_HDR_CAPTURE, FUNCTION_MODE_RECORD_NORMAL, FUNCTION_MODE_PREVIEW_STREAM)
+    private val functionModes = intArrayOf(FUNCTION_MODE_CAPTURE_NORMAL, /*FUNCTION_MODE_HDR_CAPTURE,*/ FUNCTION_MODE_RECORD_NORMAL, FUNCTION_MODE_PREVIEW_STREAM)
     private val resolutions = arrayOf(PreviewStreamResolution.STREAM_1280_720_30FPS, PreviewStreamResolution.STREAM_1920_1080_30FPS, PreviewStreamResolution.STREAM_3840_2160_30FPS)
     //---Initialize (run on app load)---
     @SuppressLint("MissingInflatedId")
@@ -208,6 +208,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/set/exposureMode") {
                     for (mode in functionModes) InstaCameraManager.getInstance().setExposureMode(mode, call.request.queryParameters["exposureMode"]!!.toInt())
+                    call.respond(mapOf("msg" to "ok"))
+                }
+                get("/get/exposureEV") {
+                    call.respond(mapOf("exposureEV" to InstaCameraManager.getInstance().getExposureEV(FUNCTION_MODE_PREVIEW_STREAM)))
+                }
+                get("/set/exposureEV") {
+                    for (mode in functionModes) InstaCameraManager.getInstance().setExposureEV(mode, call.request.queryParameters["exposureEV"]!!.toFloat())
                     call.respond(mapOf("msg" to "ok"))
                 }
                 //-Capture Routes-
