@@ -224,6 +224,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     for (mode in functionModes) InstaCameraManager.getInstance().setShutterMode(mode, call.request.queryParameters["shutterMode"]!!.toInt())
                     call.respond(mapOf("msg" to "ok"))
                 }
+                get("/get/gammaMode") {
+                    call.respond(mapOf("gammaMode" to InstaCameraManager.getInstance().getGammaModeFromCamera(FUNCTION_MODE_PREVIEW_STREAM)))
+                }
+                get("/set/gammaMode") {
+                    for (mode in functionModes) InstaCameraManager.getInstance().setGammaModeToCamera(mode, call.request.queryParameters["gammaMode"]!!.toInt())
+                    call.respond(mapOf("msg" to "ok"))
+                }
                 //-Capture Routes-
                 get("/command/capture") {
                     if (InstaCameraManager.getInstance().cameraConnectedType != InstaCameraManager.CONNECT_TYPE_USB) {
