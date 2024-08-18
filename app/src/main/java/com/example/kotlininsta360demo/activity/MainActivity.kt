@@ -158,7 +158,7 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/command/init"){
                     for (mode in functionModes) InstaCameraManager.getInstance().setISOTopLimit(mode, 3200)
-                    for (mode in functionModes) InstaCameraManager.getInstance().setExposureMode(mode, InstaCameraManager.EXPOSURE_MODE_MANUAL)
+//                    for (mode in functionModes) InstaCameraManager.getInstance().setExposureMode(mode, InstaCameraManager.EXPOSURE_MODE_MANUAL)
                     call.respond(mapOf("msg" to "ok"))
                 }
                 get("/command/disconnect") {
@@ -185,6 +185,8 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["exposureEV"] = InstaCameraManager.getInstance().getExposureEV(FUNCTION_MODE_PREVIEW_STREAM)
                     response["shutterMode"] = InstaCameraManager.getInstance().getShutterMode(FUNCTION_MODE_PREVIEW_STREAM)
                     response["shutterSpeed"] = InstaCameraManager.getInstance().getShutterSpeed(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["gammaMode"] = InstaCameraManager.getInstance().getGammaModeFromCamera(FUNCTION_MODE_PREVIEW_STREAM)
+                    response["latency"] = InstaCameraManager.getInstance().getLatencyFromCamera(FUNCTION_MODE_PREVIEW_STREAM)
                     call.respond(response)
                 }
                 get("/get/whiteBalance") {
@@ -199,6 +201,13 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                 }
                 get("/set/ISO") {
                     for (mode in functionModes) InstaCameraManager.getInstance().setISO(mode, call.request.queryParameters["ISO"]!!.toInt())
+                    call.respond(mapOf("msg" to "ok"))
+                }
+                get("/get/exposureMode") {
+                    call.respond(mapOf("exposureMode" to InstaCameraManager.getInstance().getExposureMode(FUNCTION_MODE_PREVIEW_STREAM)))
+                }
+                get("/set/exposureMode") {
+                    for (mode in functionModes) InstaCameraManager.getInstance().setExposureMode(mode, call.request.queryParameters["exposureMode"]!!.toInt())
                     call.respond(mapOf("msg" to "ok"))
                 }
                 //-Capture Routes-
