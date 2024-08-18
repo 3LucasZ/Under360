@@ -52,3 +52,13 @@ object ImageUtil {
         return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
     }
 }
+
+fun getFileName(filePath: String): String {
+    return filePath.substring(filePath.lastIndexOf("/") + 1);
+}
+fun getFilePrefix(filePath: String): String {
+    return getFileName(filePath).split("_")[0];
+}
+fun getFileSuffix(filePath: String): String {
+    return filePath.split(".").last()
+}
