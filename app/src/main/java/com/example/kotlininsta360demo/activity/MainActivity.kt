@@ -13,28 +13,19 @@ import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
-import com.arashivision.camera.InstaCameraConstants
-import com.arashivision.camera.InstaCameraController
-import com.arashivision.camera.InstaCameraState
 import com.arashivision.sdkcamera.InstaCameraSDK
 import com.arashivision.sdkcamera.camera.InstaCameraManager
-import com.arashivision.sdkcamera.camera.InstaCameraManager.CAPTURE_TYPE_NORMAL_RECORD
 import com.arashivision.sdkcamera.camera.InstaCameraManager.CONNECT_TYPE_USB
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL
-import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_CAPTURE_NORMAL_PANO
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_HDR_CAPTURE
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_PREVIEW_STREAM
 import com.arashivision.sdkcamera.camera.InstaCameraManager.FUNCTION_MODE_RECORD_NORMAL
-import com.arashivision.sdkcamera.camera.InstaCameraManager.PREVIEW_TYPE_LIVE
-import com.arashivision.sdkcamera.camera.InstaCameraManager.PREVIEW_TYPE_NORMAL
-import com.arashivision.sdkcamera.camera.InstaCameraManager.PREVIEW_TYPE_RECORD
 import com.arashivision.sdkcamera.camera.callback.ICameraOperateCallback
 import com.arashivision.sdkcamera.camera.callback.ICaptureStatusListener
 import com.arashivision.sdkcamera.camera.callback.ILiveStatusListener
 import com.arashivision.sdkcamera.camera.callback.IPreviewStatusListener
 import com.arashivision.sdkcamera.camera.live.LiveParamsBuilder
 import com.arashivision.sdkcamera.camera.preview.PreviewParamsBuilder
-import com.arashivision.sdkcamera.camera.resolution.PhotoResolution
 import com.arashivision.sdkcamera.camera.resolution.PreviewStreamResolution
 import com.arashivision.sdkmedia.InstaMediaSDK
 import com.arashivision.sdkmedia.export.ExportImageParamsBuilder
@@ -45,10 +36,9 @@ import com.arashivision.sdkmedia.player.capture.CaptureParamsBuilder
 import com.arashivision.sdkmedia.player.capture.InstaCapturePlayerView
 import com.arashivision.sdkmedia.player.config.InstaStabType
 import com.arashivision.sdkmedia.player.listener.PlayerViewListener
-import com.arashivision.sdkmedia.stitch.StitchUtils
+import com.arashivision.sdkmedia.work.WorkUtils
 import com.arashivision.sdkmedia.work.WorkWrapper
 import com.example.kotlininsta360demo.ImageUtil
-import com.example.kotlininsta360demo.MyCaptureStatus
 import com.example.kotlininsta360demo.MyPreviewStatus
 import com.example.kotlininsta360demo.R
 import io.ktor.http.HttpStatusCode
@@ -67,6 +57,7 @@ import io.ktor.websocket.close
 import io.ktor.websocket.send
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.time.Duration
+
 
 class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveStatusListener,
     IExportCallback, PlayerViewListener, ICameraOperateCallback, ICaptureStatusListener {
@@ -340,6 +331,16 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                         response["data"] = urls
                         call.respond(response)
                     }
+                }
+                get("/ls/x"){
+                    val response = HashMap<String, Any>()
+//                    response["allCameraWorks"] =
+//                        WorkUtils.getAllCameraWorks(InstaCameraManager.getInstance().cameraHttpPrefix,
+//                            InstaCameraManager.getInstance().cameraInfoMap,
+//                            InstaCameraManager.getInstance().allUrlList,
+//                            InstaCameraManager.getInstance().rawUrlList)
+                    response["allLocalWorks"] = WorkUtils.getAllLocalWorks(exportDirPath);
+                    call.respond(response)
                 }
                 get("/ls/verbose"){
                     val response = HashMap<String, Any>()
