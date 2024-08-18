@@ -376,7 +376,12 @@ class MainActivity : BaseObserveCameraActivity(), IPreviewStatusListener, ILiveS
                     response["fps"] = workWrapper.fps
                     response["creationTime"] = workWrapper.creationTime
                     response["fileSize"] = workWrapper.fileSize
-                    response["delete"] = workWrapper.urlsForDelete
+                    //mini
+                    response["isHDR"] = workWrapper.isHDRPhoto || workWrapper.isHDRVideo
+                    response["supportPureshot"] = workWrapper.supportPureShot()
+                    response["urlsForDelete"] = workWrapper.urlsForDelete
+                    response["urls"] = workWrapper.getUrls(false)
+                    response["urlsRaw"] = workWrapper.getUrls(true)
                     call.respond(response)
                 }
                 get("/rm"){
