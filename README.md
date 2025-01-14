@@ -7,6 +7,8 @@
 
 Under360 is an Android application that enables you to remotely control the Insta360 camera.
 
+(Main Activity)[https://github.com/3LucasZ/Under360/blob/main/app/src/main/java/com/example/kotlininsta360demo/activity/MainActivity.kt]
+
 ## Getting Started
 
 Install the apk onto your device.
